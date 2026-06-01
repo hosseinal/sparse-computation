@@ -1,9 +1,12 @@
 # Compressed Tensor Algebra
 
-**Build:** `./build_local.sh` or `./build_local.sh 4 32`
+**Build:** `./build_local.sh`
 
-**Run (large b_col):** `./run_local_spmm_large_b_col.sh /path/to/matrices 32`
+**Run** (your matrix file + b_col width):
 
-**Run (small b_col):** `./run_local_spmm_small_b_col.sh /path/to/matrices 4`
+```bash
+./run_local_spmm_large_b_col.sh data/ash85.mtx 32
+./run_local_spmm_small_b_col.sh data/ash85.mtx 4
+```
 
-Needs: CUDA, CMake, Python 3, and `benchmark/` + `aggregation/` in the project root.
+Creates `ash85-4-8.cfmtx` (or `ash85-4-1.cfmtx`) next to `ash85.mtx`, then runs the benchmark on that file.
