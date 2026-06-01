@@ -1,11 +1,11 @@
 # Compressed Tensor Algebra
 
-**Build:** copy this folder anywhere (zip/USB is fine). From inside it: `./build_local.sh 4 32`
+**Build:** `git submodule update --init --recursive` then `./build_local.sh 4 32`
 
-The first run downloads two libraries into `benchmark/` and `aggregation/` (needs `git` on the machine). Your project does not need to be on GitHub.
+**Run (large b_col):** Put `mat_list.txt` (one `.mtx` name per line) and your `.mtx` files in a folder. Generate `.cfmtx` with `format_generator.py` (see `run_local_spmm_large_b_col.sh`). Then:
 
-**Run (large b_col):** `./run_local_spmm_large_b_col.sh /path/to/matrices 32`
+`./run_local_spmm_large_b_col.sh /path/to/matrices 32`
 
 **Run (small b_col):** `./run_local_spmm_small_b_col.sh /path/to/matrices 4`
 
-Needs: CUDA, CMake, Python 3, `git` (once, for dependencies).
+Needs: CUDA, CMake, Python 3 (`numpy`, `scipy`).
