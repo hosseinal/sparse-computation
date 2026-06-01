@@ -6,6 +6,8 @@ cd "$(dirname "$0")"
 M=${1:-4}
 B_COL=${2:-32}
 
+echo "Python venv ..."
+python3 -m venv venv
 source venv/bin/activate
 pip install -q -r requirements.txt
 

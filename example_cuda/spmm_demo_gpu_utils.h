@@ -1,5 +1,5 @@
-#ifndef COMPRESSED_TENSOR_ALGEBRA_SPMM_SMALL_B_COL_DEMO_GPU_UTILS_H
-#define COMPRESSED_TENSOR_ALGEBRA_SPMM_SMALL_B_COL_DEMO_GPU_UTILS_H
+#ifndef COMPRESSED_TENSOR_ALGEBRA_SPMM_DEMO_GPU_UTILS_H
+#define COMPRESSED_TENSOR_ALGEBRA_SPMM_DEMO_GPU_UTILS_H
 
 #include "SWTensorBench.h"
 #include "aggregation/def.h"
@@ -230,6 +230,16 @@ allocateAndCopyMixedFormat(swiftware::compression::MixedFormat<T> *h_mixed) {
              sizeof(swiftware::compression::CompressedFormatGPU<T> *),
              cudaMemcpyHostToDevice);
 
+  //  int cf_len = h_mixed->cf.size();
+  //  cudaMemcpy(&(d_mixed->cflen), &cf_len, sizeof(int *),
+  //  cudaMemcpyHostToDevice);
+
+  // Allocate and copy the CSRFormat
+  //  swiftware::compression::CSRFormatGPU<T> *d_csr =
+  //      allocateAndCopyCSRFormat(h_mixed->csr);
+  //  cudaMemcpy(&(d_mixed->csr), &d_csr,
+  //             sizeof(swiftware::compression::CSRFormatGPU<T> *),
+  //             cudaMemcpyHostToDevice);
 
   return d_mixed;
 }
@@ -1344,292 +1354,893 @@ public:
         cudaFree(dY);
       }
     };
-    
-    __device__ void PatternWith3NNZByRowPanel3RowPerThread8BlockCacheLess(
+    __device__ void PatternWith4NNZByRowPanel4RowPerThread8BlockCacheLess(
+    int *RPP, int *NPP, float *NNZ, int *CB, float *dx, float *dy,int i, int c_cols, int offset0, int offset1, int offset2, int offset3) {
+int blockSize = blockDim.x;
+int thread_id_in_warp = threadIdx.x % 32;
+int warp_id = threadIdx.x / 32;
+int number_of_warps = blockSize / 32;
+int rowStart_all = RPP[i];
+int rowEnd_all = RPP[i + 1];
+if (rowStart_all == rowEnd_all) {
+   return;
+}
+int number_of_row_panel_packs = (rowEnd_all - rowStart_all + 8 - 1) / 8;
+int row_panel_pack_share = ((number_of_row_panel_packs + gridDim.y - 1) / gridDim.y) * 8;
+int row_panel_start = rowStart_all + blockIdx.y * row_panel_pack_share;
+int row_panel_end = row_panel_start + row_panel_pack_share;
+row_panel_end = row_panel_end > rowEnd_all ? rowEnd_all : row_panel_end;
+if (row_panel_start >= row_panel_end) {
+    return;
+}
+int c_col_partition = (c_cols + 255) / 256;
+int c_col_share = ((c_col_partition + number_of_warps - 1) / number_of_warps) * 256;
+c_col_share = c_col_share == 0 ? 256 : c_col_share;
+int c_col_start = c_col_share * warp_id;
+int c_col_end = c_col_start + c_col_share;
+c_col_end = c_col_end > c_cols ? c_cols : c_col_end;
+if (c_col_start >= c_col_end) {
+    return;
+}
+for (int col = c_col_start; col < c_col_end; col += 256) {
+int t_nnz = NPP[i] + (row_panel_start - rowStart_all) * 4;
+float sum_0 = 0.0f;
+float sum_1 = 0.0f;
+float sum_2 = 0.0f;
+float sum_3 = 0.0f;
+float sum_4 = 0.0f;
+float sum_5 = 0.0f;
+float sum_6 = 0.0f;
+float sum_7 = 0.0f;
+float sum_8 = 0.0f;
+float sum_9 = 0.0f;
+float sum_10 = 0.0f;
+float sum_11 = 0.0f;
+float sum_12 = 0.0f;
+float sum_13 = 0.0f;
+float sum_14 = 0.0f;
+float sum_15 = 0.0f;
+float sum_16 = 0.0f;
+float sum_17 = 0.0f;
+float sum_18 = 0.0f;
+float sum_19 = 0.0f;
+float sum_20 = 0.0f;
+float sum_21 = 0.0f;
+float sum_22 = 0.0f;
+float sum_23 = 0.0f;
+float sum_24 = 0.0f;
+float sum_25 = 0.0f;
+float sum_26 = 0.0f;
+float sum_27 = 0.0f;
+float sum_28 = 0.0f;
+float sum_29 = 0.0f;
+float sum_30 = 0.0f;
+float sum_31 = 0.0f;
+for (int j = row_panel_start; j < row_panel_end; j += 8) {
+int sub_b_row_start_0 = CB[j + 0];
+int sub_b_row_start_1 = CB[j + 1];
+int sub_b_row_start_2 = CB[j + 2];
+int sub_b_row_start_3 = CB[j + 3];
+int sub_b_row_start_4 = CB[j + 4];
+int sub_b_row_start_5 = CB[j + 5];
+int sub_b_row_start_6 = CB[j + 6];
+int sub_b_row_start_7 = CB[j + 7];
+int sub_b_col_0 = col + 0 + thread_id_in_warp;
+int sub_b_col_1 = col + 32 + thread_id_in_warp;
+int sub_b_col_2 = col + 64 + thread_id_in_warp;
+int sub_b_col_3 = col + 96 + thread_id_in_warp;
+int sub_b_col_4 = col + 128 + thread_id_in_warp;
+int sub_b_col_5 = col + 160 + thread_id_in_warp;
+int sub_b_col_6 = col + 192 + thread_id_in_warp;
+int sub_b_col_7 = col + 224 + thread_id_in_warp;
+float nnz0_0 = NNZ[t_nnz + 0];
+float nnz1_0 = NNZ[t_nnz + 1];
+float nnz2_0 = NNZ[t_nnz + 2];
+float nnz3_0 = NNZ[t_nnz + 3];
+float nnz0_1 = NNZ[t_nnz + 4];
+float nnz1_1 = NNZ[t_nnz + 5];
+float nnz2_1 = NNZ[t_nnz + 6];
+float nnz3_1 = NNZ[t_nnz + 7];
+float nnz0_2 = NNZ[t_nnz + 8];
+float nnz1_2 = NNZ[t_nnz + 9];
+float nnz2_2 = NNZ[t_nnz + 10];
+float nnz3_2 = NNZ[t_nnz + 11];
+float nnz0_3 = NNZ[t_nnz + 12];
+float nnz1_3 = NNZ[t_nnz + 13];
+float nnz2_3 = NNZ[t_nnz + 14];
+float nnz3_3 = NNZ[t_nnz + 15];
+float nnz0_4 = NNZ[t_nnz + 16];
+float nnz1_4 = NNZ[t_nnz + 17];
+float nnz2_4 = NNZ[t_nnz + 18];
+float nnz3_4 = NNZ[t_nnz + 19];
+float nnz0_5 = NNZ[t_nnz + 20];
+float nnz1_5 = NNZ[t_nnz + 21];
+float nnz2_5 = NNZ[t_nnz + 22];
+float nnz3_5 = NNZ[t_nnz + 23];
+float nnz0_6 = NNZ[t_nnz + 24];
+float nnz1_6 = NNZ[t_nnz + 25];
+float nnz2_6 = NNZ[t_nnz + 26];
+float nnz3_6 = NNZ[t_nnz + 27];
+float nnz0_7 = NNZ[t_nnz + 28];
+float nnz1_7 = NNZ[t_nnz + 29];
+float nnz2_7 = NNZ[t_nnz + 30];
+float nnz3_7 = NNZ[t_nnz + 31];
+float b0 = dx[sub_b_row_start_0 * c_cols + sub_b_col_0];
+float b1 = dx[sub_b_row_start_1 * c_cols + sub_b_col_0];
+float b2 = dx[sub_b_row_start_2 * c_cols + sub_b_col_0];
+float b3 = dx[sub_b_row_start_3 * c_cols + sub_b_col_0];
+float b4 = dx[sub_b_row_start_4 * c_cols + sub_b_col_0];
+float b5 = dx[sub_b_row_start_5 * c_cols + sub_b_col_0];
+float b6 = dx[sub_b_row_start_6 * c_cols + sub_b_col_0];
+float b7 = dx[sub_b_row_start_7 * c_cols + sub_b_col_0];
+float b8 = dx[sub_b_row_start_0 * c_cols + sub_b_col_1];
+float b9 = dx[sub_b_row_start_1 * c_cols + sub_b_col_1];
+float b10 = dx[sub_b_row_start_2 * c_cols + sub_b_col_1];
+float b11 = dx[sub_b_row_start_3 * c_cols + sub_b_col_1];
+float b12 = dx[sub_b_row_start_4 * c_cols + sub_b_col_1];
+float b13 = dx[sub_b_row_start_5 * c_cols + sub_b_col_1];
+float b14 = dx[sub_b_row_start_6 * c_cols + sub_b_col_1];
+float b15 = dx[sub_b_row_start_7 * c_cols + sub_b_col_1];
+float b16 = dx[sub_b_row_start_0 * c_cols + sub_b_col_2];
+float b17 = dx[sub_b_row_start_1 * c_cols + sub_b_col_2];
+float b18 = dx[sub_b_row_start_2 * c_cols + sub_b_col_2];
+float b19 = dx[sub_b_row_start_3 * c_cols + sub_b_col_2];
+float b20 = dx[sub_b_row_start_4 * c_cols + sub_b_col_2];
+float b21 = dx[sub_b_row_start_5 * c_cols + sub_b_col_2];
+float b22 = dx[sub_b_row_start_6 * c_cols + sub_b_col_2];
+float b23 = dx[sub_b_row_start_7 * c_cols + sub_b_col_2];
+float b24 = dx[sub_b_row_start_0 * c_cols + sub_b_col_3];
+float b25 = dx[sub_b_row_start_1 * c_cols + sub_b_col_3];
+float b26 = dx[sub_b_row_start_2 * c_cols + sub_b_col_3];
+float b27 = dx[sub_b_row_start_3 * c_cols + sub_b_col_3];
+float b28 = dx[sub_b_row_start_4 * c_cols + sub_b_col_3];
+float b29 = dx[sub_b_row_start_5 * c_cols + sub_b_col_3];
+float b30 = dx[sub_b_row_start_6 * c_cols + sub_b_col_3];
+float b31 = dx[sub_b_row_start_7 * c_cols + sub_b_col_3];
+float b32 = dx[sub_b_row_start_0 * c_cols + sub_b_col_4];
+float b33 = dx[sub_b_row_start_1 * c_cols + sub_b_col_4];
+float b34 = dx[sub_b_row_start_2 * c_cols + sub_b_col_4];
+float b35 = dx[sub_b_row_start_3 * c_cols + sub_b_col_4];
+float b36 = dx[sub_b_row_start_4 * c_cols + sub_b_col_4];
+float b37 = dx[sub_b_row_start_5 * c_cols + sub_b_col_4];
+float b38 = dx[sub_b_row_start_6 * c_cols + sub_b_col_4];
+float b39 = dx[sub_b_row_start_7 * c_cols + sub_b_col_4];
+float b40 = dx[sub_b_row_start_0 * c_cols + sub_b_col_5];
+float b41 = dx[sub_b_row_start_1 * c_cols + sub_b_col_5];
+float b42 = dx[sub_b_row_start_2 * c_cols + sub_b_col_5];
+float b43 = dx[sub_b_row_start_3 * c_cols + sub_b_col_5];
+float b44 = dx[sub_b_row_start_4 * c_cols + sub_b_col_5];
+float b45 = dx[sub_b_row_start_5 * c_cols + sub_b_col_5];
+float b46 = dx[sub_b_row_start_6 * c_cols + sub_b_col_5];
+float b47 = dx[sub_b_row_start_7 * c_cols + sub_b_col_5];
+float b48 = dx[sub_b_row_start_0 * c_cols + sub_b_col_6];
+float b49 = dx[sub_b_row_start_1 * c_cols + sub_b_col_6];
+float b50 = dx[sub_b_row_start_2 * c_cols + sub_b_col_6];
+float b51 = dx[sub_b_row_start_3 * c_cols + sub_b_col_6];
+float b52 = dx[sub_b_row_start_4 * c_cols + sub_b_col_6];
+float b53 = dx[sub_b_row_start_5 * c_cols + sub_b_col_6];
+float b54 = dx[sub_b_row_start_6 * c_cols + sub_b_col_6];
+float b55 = dx[sub_b_row_start_7 * c_cols + sub_b_col_6];
+float b56 = dx[sub_b_row_start_0 * c_cols + sub_b_col_7];
+float b57 = dx[sub_b_row_start_1 * c_cols + sub_b_col_7];
+float b58 = dx[sub_b_row_start_2 * c_cols + sub_b_col_7];
+float b59 = dx[sub_b_row_start_3 * c_cols + sub_b_col_7];
+float b60 = dx[sub_b_row_start_4 * c_cols + sub_b_col_7];
+float b61 = dx[sub_b_row_start_5 * c_cols + sub_b_col_7];
+float b62 = dx[sub_b_row_start_6 * c_cols + sub_b_col_7];
+float b63 = dx[sub_b_row_start_7 * c_cols + sub_b_col_7];
+sum_0 += nnz0_0 * b0 + nnz0_1 * b1 + nnz0_2 * b2 + nnz0_3 * b3 + nnz0_4 * b4 + nnz0_5 * b5 + nnz0_6 * b6 + nnz0_7 * b7 ;
+sum_1 += nnz1_0 * b0 + nnz1_1 * b1 + nnz1_2 * b2 + nnz1_3 * b3 + nnz1_4 * b4 + nnz1_5 * b5 + nnz1_6 * b6 + nnz1_7 * b7 ;
+sum_2 += nnz2_0 * b0 + nnz2_1 * b1 + nnz2_2 * b2 + nnz2_3 * b3 + nnz2_4 * b4 + nnz2_5 * b5 + nnz2_6 * b6 + nnz2_7 * b7 ;
+sum_3 += nnz3_0 * b0 + nnz3_1 * b1 + nnz3_2 * b2 + nnz3_3 * b3 + nnz3_4 * b4 + nnz3_5 * b5 + nnz3_6 * b6 + nnz3_7 * b7 ;
+sum_4 += nnz0_0 * b8 + nnz0_1 * b9 + nnz0_2 * b10 + nnz0_3 * b11 + nnz0_4 * b12 + nnz0_5 * b13 + nnz0_6 * b14 + nnz0_7 * b15 ;
+sum_5 += nnz1_0 * b8 + nnz1_1 * b9 + nnz1_2 * b10 + nnz1_3 * b11 + nnz1_4 * b12 + nnz1_5 * b13 + nnz1_6 * b14 + nnz1_7 * b15 ;
+sum_6 += nnz2_0 * b8 + nnz2_1 * b9 + nnz2_2 * b10 + nnz2_3 * b11 + nnz2_4 * b12 + nnz2_5 * b13 + nnz2_6 * b14 + nnz2_7 * b15 ;
+sum_7 += nnz3_0 * b8 + nnz3_1 * b9 + nnz3_2 * b10 + nnz3_3 * b11 + nnz3_4 * b12 + nnz3_5 * b13 + nnz3_6 * b14 + nnz3_7 * b15 ;
+sum_8 += nnz0_0 * b16 + nnz0_1 * b17 + nnz0_2 * b18 + nnz0_3 * b19 + nnz0_4 * b20 + nnz0_5 * b21 + nnz0_6 * b22 + nnz0_7 * b23 ;
+sum_9 += nnz1_0 * b16 + nnz1_1 * b17 + nnz1_2 * b18 + nnz1_3 * b19 + nnz1_4 * b20 + nnz1_5 * b21 + nnz1_6 * b22 + nnz1_7 * b23 ;
+sum_10 += nnz2_0 * b16 + nnz2_1 * b17 + nnz2_2 * b18 + nnz2_3 * b19 + nnz2_4 * b20 + nnz2_5 * b21 + nnz2_6 * b22 + nnz2_7 * b23 ;
+sum_11 += nnz3_0 * b16 + nnz3_1 * b17 + nnz3_2 * b18 + nnz3_3 * b19 + nnz3_4 * b20 + nnz3_5 * b21 + nnz3_6 * b22 + nnz3_7 * b23 ;
+sum_12 += nnz0_0 * b24 + nnz0_1 * b25 + nnz0_2 * b26 + nnz0_3 * b27 + nnz0_4 * b28 + nnz0_5 * b29 + nnz0_6 * b30 + nnz0_7 * b31 ;
+sum_13 += nnz1_0 * b24 + nnz1_1 * b25 + nnz1_2 * b26 + nnz1_3 * b27 + nnz1_4 * b28 + nnz1_5 * b29 + nnz1_6 * b30 + nnz1_7 * b31 ;
+sum_14 += nnz2_0 * b24 + nnz2_1 * b25 + nnz2_2 * b26 + nnz2_3 * b27 + nnz2_4 * b28 + nnz2_5 * b29 + nnz2_6 * b30 + nnz2_7 * b31 ;
+sum_15 += nnz3_0 * b24 + nnz3_1 * b25 + nnz3_2 * b26 + nnz3_3 * b27 + nnz3_4 * b28 + nnz3_5 * b29 + nnz3_6 * b30 + nnz3_7 * b31 ;
+sum_16 += nnz0_0 * b32 + nnz0_1 * b33 + nnz0_2 * b34 + nnz0_3 * b35 + nnz0_4 * b36 + nnz0_5 * b37 + nnz0_6 * b38 + nnz0_7 * b39 ;
+sum_17 += nnz1_0 * b32 + nnz1_1 * b33 + nnz1_2 * b34 + nnz1_3 * b35 + nnz1_4 * b36 + nnz1_5 * b37 + nnz1_6 * b38 + nnz1_7 * b39 ;
+sum_18 += nnz2_0 * b32 + nnz2_1 * b33 + nnz2_2 * b34 + nnz2_3 * b35 + nnz2_4 * b36 + nnz2_5 * b37 + nnz2_6 * b38 + nnz2_7 * b39 ;
+sum_19 += nnz3_0 * b32 + nnz3_1 * b33 + nnz3_2 * b34 + nnz3_3 * b35 + nnz3_4 * b36 + nnz3_5 * b37 + nnz3_6 * b38 + nnz3_7 * b39 ;
+sum_20 += nnz0_0 * b40 + nnz0_1 * b41 + nnz0_2 * b42 + nnz0_3 * b43 + nnz0_4 * b44 + nnz0_5 * b45 + nnz0_6 * b46 + nnz0_7 * b47 ;
+sum_21 += nnz1_0 * b40 + nnz1_1 * b41 + nnz1_2 * b42 + nnz1_3 * b43 + nnz1_4 * b44 + nnz1_5 * b45 + nnz1_6 * b46 + nnz1_7 * b47 ;
+sum_22 += nnz2_0 * b40 + nnz2_1 * b41 + nnz2_2 * b42 + nnz2_3 * b43 + nnz2_4 * b44 + nnz2_5 * b45 + nnz2_6 * b46 + nnz2_7 * b47 ;
+sum_23 += nnz3_0 * b40 + nnz3_1 * b41 + nnz3_2 * b42 + nnz3_3 * b43 + nnz3_4 * b44 + nnz3_5 * b45 + nnz3_6 * b46 + nnz3_7 * b47 ;
+sum_24 += nnz0_0 * b48 + nnz0_1 * b49 + nnz0_2 * b50 + nnz0_3 * b51 + nnz0_4 * b52 + nnz0_5 * b53 + nnz0_6 * b54 + nnz0_7 * b55 ;
+sum_25 += nnz1_0 * b48 + nnz1_1 * b49 + nnz1_2 * b50 + nnz1_3 * b51 + nnz1_4 * b52 + nnz1_5 * b53 + nnz1_6 * b54 + nnz1_7 * b55 ;
+sum_26 += nnz2_0 * b48 + nnz2_1 * b49 + nnz2_2 * b50 + nnz2_3 * b51 + nnz2_4 * b52 + nnz2_5 * b53 + nnz2_6 * b54 + nnz2_7 * b55 ;
+sum_27 += nnz3_0 * b48 + nnz3_1 * b49 + nnz3_2 * b50 + nnz3_3 * b51 + nnz3_4 * b52 + nnz3_5 * b53 + nnz3_6 * b54 + nnz3_7 * b55 ;
+sum_28 += nnz0_0 * b56 + nnz0_1 * b57 + nnz0_2 * b58 + nnz0_3 * b59 + nnz0_4 * b60 + nnz0_5 * b61 + nnz0_6 * b62 + nnz0_7 * b63 ;
+sum_29 += nnz1_0 * b56 + nnz1_1 * b57 + nnz1_2 * b58 + nnz1_3 * b59 + nnz1_4 * b60 + nnz1_5 * b61 + nnz1_6 * b62 + nnz1_7 * b63 ;
+sum_30 += nnz2_0 * b56 + nnz2_1 * b57 + nnz2_2 * b58 + nnz2_3 * b59 + nnz2_4 * b60 + nnz2_5 * b61 + nnz2_6 * b62 + nnz2_7 * b63 ;
+sum_31 += nnz3_0 * b56 + nnz3_1 * b57 + nnz3_2 * b58 + nnz3_3 * b59 + nnz3_4 * b60 + nnz3_5 * b61 + nnz3_6 * b62 + nnz3_7 * b63 ;
+t_nnz += 32;
+}
+int c_row = i * 4;
+int c_col = col + thread_id_in_warp;
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 0], sum_0);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 0], sum_1);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 0], sum_2);
+atomicAdd(&dy[(c_row + offset3) * c_cols + c_col + 0], sum_3);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 32], sum_4);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 32], sum_5);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 32], sum_6);
+atomicAdd(&dy[(c_row + offset3) * c_cols + c_col + 32], sum_7);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 64], sum_8);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 64], sum_9);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 64], sum_10);
+atomicAdd(&dy[(c_row + offset3) * c_cols + c_col + 64], sum_11);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 96], sum_12);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 96], sum_13);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 96], sum_14);
+atomicAdd(&dy[(c_row + offset3) * c_cols + c_col + 96], sum_15);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 128], sum_16);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 128], sum_17);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 128], sum_18);
+atomicAdd(&dy[(c_row + offset3) * c_cols + c_col + 128], sum_19);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 160], sum_20);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 160], sum_21);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 160], sum_22);
+atomicAdd(&dy[(c_row + offset3) * c_cols + c_col + 160], sum_23);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 192], sum_24);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 192], sum_25);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 192], sum_26);
+atomicAdd(&dy[(c_row + offset3) * c_cols + c_col + 192], sum_27);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 224], sum_28);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 224], sum_29);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 224], sum_30);
+atomicAdd(&dy[(c_row + offset3) * c_cols + c_col + 224], sum_31);
+}
+}
+
+
+__device__ void PatternWith4NNZByRowPanel3RowPerThread8BlockCacheLess(
     int *RPP, int *NPP, float *NNZ, int *CB, float *dx, float *dy,int i, int c_cols, int offset0, int offset1, int offset2) {
-    int blockSize = blockDim.x;
-    int thread_id_in_warp = threadIdx.x % 32;
-    int warp_id = threadIdx.x / 32;
-    int number_of_warps = blockSize / 32;
-    int rowStart_all = RPP[i];
-    int rowEnd_all = RPP[i + 1];
-    if (rowStart_all == rowEnd_all) {
-      return;
-    }
-    int number_of_row_panel_packs = (rowEnd_all - rowStart_all + 8 - 1) / 8;
-    int row_panel_pack_share = ((number_of_row_panel_packs + gridDim.y - 1) / gridDim.y) * 8;
-    int row_panel_start = rowStart_all + blockIdx.y * row_panel_pack_share;
-    int row_panel_end = row_panel_start + row_panel_pack_share;
-    row_panel_end = row_panel_end > rowEnd_all ? rowEnd_all : row_panel_end;
-    if (row_panel_start >= row_panel_end) {
-        return;
-    }
-    int c_col_partition = (c_cols + 31) / 32;
-    int c_col_share = ((c_col_partition + number_of_warps - 1) / number_of_warps) * 32;
-    c_col_share = c_col_share == 0 ? 32 : c_col_share;
-    int c_col_start = c_col_share * warp_id;
-    int c_col_end = c_col_start + c_col_share;
-    c_col_end = c_col_end > c_cols ? c_cols : c_col_end;
-    if (c_col_start >= c_col_end) {
-        return;
-    }
-    for (int col = c_col_start; col < c_col_end; col += 32) {
-    int t_nnz = NPP[i] + (row_panel_start - rowStart_all) * 3;
-    float sum_0 = 0.0f;
-    float sum_1 = 0.0f;
-    float sum_2 = 0.0f;
-    for (int j = row_panel_start; j < row_panel_end; j += 8) {
-    int sub_b_row_start_0 = CB[j + 0];
-    int sub_b_row_start_1 = CB[j + 1];
-    int sub_b_row_start_2 = CB[j + 2];
-    int sub_b_row_start_3 = CB[j + 3];
-    int sub_b_row_start_4 = CB[j + 4];
-    int sub_b_row_start_5 = CB[j + 5];
-    int sub_b_row_start_6 = CB[j + 6];
-    int sub_b_row_start_7 = CB[j + 7];
-    int sub_b_col_0 = col + 0 + thread_id_in_warp;
-    float nnz0_0 = NNZ[t_nnz + 0];
-    float nnz1_0 = NNZ[t_nnz + 1];
-    float nnz2_0 = NNZ[t_nnz + 2];
-    float nnz0_1 = NNZ[t_nnz + 3];
-    float nnz1_1 = NNZ[t_nnz + 4];
-    float nnz2_1 = NNZ[t_nnz + 5];
-    float nnz0_2 = NNZ[t_nnz + 6];
-    float nnz1_2 = NNZ[t_nnz + 7];
-    float nnz2_2 = NNZ[t_nnz + 8];
-    float nnz0_3 = NNZ[t_nnz + 9];
-    float nnz1_3 = NNZ[t_nnz + 10];
-    float nnz2_3 = NNZ[t_nnz + 11];
-    float nnz0_4 = NNZ[t_nnz + 12];
-    float nnz1_4 = NNZ[t_nnz + 13];
-    float nnz2_4 = NNZ[t_nnz + 14];
-    float nnz0_5 = NNZ[t_nnz + 15];
-    float nnz1_5 = NNZ[t_nnz + 16];
-    float nnz2_5 = NNZ[t_nnz + 17];
-    float nnz0_6 = NNZ[t_nnz + 18];
-    float nnz1_6 = NNZ[t_nnz + 19];
-    float nnz2_6 = NNZ[t_nnz + 20];
-    float nnz0_7 = NNZ[t_nnz + 21];
-    float nnz1_7 = NNZ[t_nnz + 22];
-    float nnz2_7 = NNZ[t_nnz + 23];
-    float b0 = dx[sub_b_row_start_0 * c_cols + sub_b_col_0];
-    float b1 = dx[sub_b_row_start_1 * c_cols + sub_b_col_0];
-    float b2 = dx[sub_b_row_start_2 * c_cols + sub_b_col_0];
-    float b3 = dx[sub_b_row_start_3 * c_cols + sub_b_col_0];
-    float b4 = dx[sub_b_row_start_4 * c_cols + sub_b_col_0];
-    float b5 = dx[sub_b_row_start_5 * c_cols + sub_b_col_0];
-    float b6 = dx[sub_b_row_start_6 * c_cols + sub_b_col_0];
-    float b7 = dx[sub_b_row_start_7 * c_cols + sub_b_col_0];
-    sum_0 += nnz0_0 * b0 + nnz0_1 * b1 + nnz0_2 * b2 + nnz0_3 * b3 + nnz0_4 * b4 + nnz0_5 * b5 + nnz0_6 * b6 + nnz0_7 * b7 ;
-    sum_1 += nnz1_0 * b0 + nnz1_1 * b1 + nnz1_2 * b2 + nnz1_3 * b3 + nnz1_4 * b4 + nnz1_5 * b5 + nnz1_6 * b6 + nnz1_7 * b7 ;
-    sum_2 += nnz2_0 * b0 + nnz2_1 * b1 + nnz2_2 * b2 + nnz2_3 * b3 + nnz2_4 * b4 + nnz2_5 * b5 + nnz2_6 * b6 + nnz2_7 * b7 ;
-    t_nnz += 24;
-    }
-    int c_row = i * 3;
-    int c_col = col + thread_id_in_warp;
-    atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 0], sum_0);
-    atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 0], sum_1);
-    atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 0], sum_2);
-    }
-    }
+int blockSize = blockDim.x;
+int thread_id_in_warp = threadIdx.x % 32;
+int warp_id = threadIdx.x / 32;
+int number_of_warps = blockSize / 32;
+int rowStart_all = RPP[i];
+int rowEnd_all = RPP[i + 1];
+if (rowStart_all == rowEnd_all) {
+   return;
+}
+int number_of_row_panel_packs = (rowEnd_all - rowStart_all + 8 - 1) / 8;
+int row_panel_pack_share = ((number_of_row_panel_packs + gridDim.y - 1) / gridDim.y) * 8;
+int row_panel_start = rowStart_all + blockIdx.y * row_panel_pack_share;
+int row_panel_end = row_panel_start + row_panel_pack_share;
+row_panel_end = row_panel_end > rowEnd_all ? rowEnd_all : row_panel_end;
+if (row_panel_start >= row_panel_end) {
+    return;
+}
+int c_col_partition = (c_cols + 255) / 256;
+int c_col_share = ((c_col_partition + number_of_warps - 1) / number_of_warps) * 256;
+c_col_share = c_col_share == 0 ? 256 : c_col_share;
+int c_col_start = c_col_share * warp_id;
+int c_col_end = c_col_start + c_col_share;
+c_col_end = c_col_end > c_cols ? c_cols : c_col_end;
+if (c_col_start >= c_col_end) {
+    return;
+}
+for (int col = c_col_start; col < c_col_end; col += 256) {
+int t_nnz = NPP[i] + (row_panel_start - rowStart_all) * 3;
+float sum_0 = 0.0f;
+float sum_1 = 0.0f;
+float sum_2 = 0.0f;
+float sum_3 = 0.0f;
+float sum_4 = 0.0f;
+float sum_5 = 0.0f;
+float sum_6 = 0.0f;
+float sum_7 = 0.0f;
+float sum_8 = 0.0f;
+float sum_9 = 0.0f;
+float sum_10 = 0.0f;
+float sum_11 = 0.0f;
+float sum_12 = 0.0f;
+float sum_13 = 0.0f;
+float sum_14 = 0.0f;
+float sum_15 = 0.0f;
+float sum_16 = 0.0f;
+float sum_17 = 0.0f;
+float sum_18 = 0.0f;
+float sum_19 = 0.0f;
+float sum_20 = 0.0f;
+float sum_21 = 0.0f;
+float sum_22 = 0.0f;
+float sum_23 = 0.0f;
+for (int j = row_panel_start; j < row_panel_end; j += 8) {
+int sub_b_row_start_0 = CB[j + 0];
+int sub_b_row_start_1 = CB[j + 1];
+int sub_b_row_start_2 = CB[j + 2];
+int sub_b_row_start_3 = CB[j + 3];
+int sub_b_row_start_4 = CB[j + 4];
+int sub_b_row_start_5 = CB[j + 5];
+int sub_b_row_start_6 = CB[j + 6];
+int sub_b_row_start_7 = CB[j + 7];
+int sub_b_col_0 = col + 0 + thread_id_in_warp;
+int sub_b_col_1 = col + 32 + thread_id_in_warp;
+int sub_b_col_2 = col + 64 + thread_id_in_warp;
+int sub_b_col_3 = col + 96 + thread_id_in_warp;
+int sub_b_col_4 = col + 128 + thread_id_in_warp;
+int sub_b_col_5 = col + 160 + thread_id_in_warp;
+int sub_b_col_6 = col + 192 + thread_id_in_warp;
+int sub_b_col_7 = col + 224 + thread_id_in_warp;
+float nnz0_0 = NNZ[t_nnz + 0];
+float nnz1_0 = NNZ[t_nnz + 1];
+float nnz2_0 = NNZ[t_nnz + 2];
+float nnz0_1 = NNZ[t_nnz + 3];
+float nnz1_1 = NNZ[t_nnz + 4];
+float nnz2_1 = NNZ[t_nnz + 5];
+float nnz0_2 = NNZ[t_nnz + 6];
+float nnz1_2 = NNZ[t_nnz + 7];
+float nnz2_2 = NNZ[t_nnz + 8];
+float nnz0_3 = NNZ[t_nnz + 9];
+float nnz1_3 = NNZ[t_nnz + 10];
+float nnz2_3 = NNZ[t_nnz + 11];
+float nnz0_4 = NNZ[t_nnz + 12];
+float nnz1_4 = NNZ[t_nnz + 13];
+float nnz2_4 = NNZ[t_nnz + 14];
+float nnz0_5 = NNZ[t_nnz + 15];
+float nnz1_5 = NNZ[t_nnz + 16];
+float nnz2_5 = NNZ[t_nnz + 17];
+float nnz0_6 = NNZ[t_nnz + 18];
+float nnz1_6 = NNZ[t_nnz + 19];
+float nnz2_6 = NNZ[t_nnz + 20];
+float nnz0_7 = NNZ[t_nnz + 21];
+float nnz1_7 = NNZ[t_nnz + 22];
+float nnz2_7 = NNZ[t_nnz + 23];
+float b0 = dx[sub_b_row_start_0 * c_cols + sub_b_col_0];
+float b1 = dx[sub_b_row_start_1 * c_cols + sub_b_col_0];
+float b2 = dx[sub_b_row_start_2 * c_cols + sub_b_col_0];
+float b3 = dx[sub_b_row_start_3 * c_cols + sub_b_col_0];
+float b4 = dx[sub_b_row_start_4 * c_cols + sub_b_col_0];
+float b5 = dx[sub_b_row_start_5 * c_cols + sub_b_col_0];
+float b6 = dx[sub_b_row_start_6 * c_cols + sub_b_col_0];
+float b7 = dx[sub_b_row_start_7 * c_cols + sub_b_col_0];
+float b8 = dx[sub_b_row_start_0 * c_cols + sub_b_col_1];
+float b9 = dx[sub_b_row_start_1 * c_cols + sub_b_col_1];
+float b10 = dx[sub_b_row_start_2 * c_cols + sub_b_col_1];
+float b11 = dx[sub_b_row_start_3 * c_cols + sub_b_col_1];
+float b12 = dx[sub_b_row_start_4 * c_cols + sub_b_col_1];
+float b13 = dx[sub_b_row_start_5 * c_cols + sub_b_col_1];
+float b14 = dx[sub_b_row_start_6 * c_cols + sub_b_col_1];
+float b15 = dx[sub_b_row_start_7 * c_cols + sub_b_col_1];
+float b16 = dx[sub_b_row_start_0 * c_cols + sub_b_col_2];
+float b17 = dx[sub_b_row_start_1 * c_cols + sub_b_col_2];
+float b18 = dx[sub_b_row_start_2 * c_cols + sub_b_col_2];
+float b19 = dx[sub_b_row_start_3 * c_cols + sub_b_col_2];
+float b20 = dx[sub_b_row_start_4 * c_cols + sub_b_col_2];
+float b21 = dx[sub_b_row_start_5 * c_cols + sub_b_col_2];
+float b22 = dx[sub_b_row_start_6 * c_cols + sub_b_col_2];
+float b23 = dx[sub_b_row_start_7 * c_cols + sub_b_col_2];
+float b24 = dx[sub_b_row_start_0 * c_cols + sub_b_col_3];
+float b25 = dx[sub_b_row_start_1 * c_cols + sub_b_col_3];
+float b26 = dx[sub_b_row_start_2 * c_cols + sub_b_col_3];
+float b27 = dx[sub_b_row_start_3 * c_cols + sub_b_col_3];
+float b28 = dx[sub_b_row_start_4 * c_cols + sub_b_col_3];
+float b29 = dx[sub_b_row_start_5 * c_cols + sub_b_col_3];
+float b30 = dx[sub_b_row_start_6 * c_cols + sub_b_col_3];
+float b31 = dx[sub_b_row_start_7 * c_cols + sub_b_col_3];
+float b32 = dx[sub_b_row_start_0 * c_cols + sub_b_col_4];
+float b33 = dx[sub_b_row_start_1 * c_cols + sub_b_col_4];
+float b34 = dx[sub_b_row_start_2 * c_cols + sub_b_col_4];
+float b35 = dx[sub_b_row_start_3 * c_cols + sub_b_col_4];
+float b36 = dx[sub_b_row_start_4 * c_cols + sub_b_col_4];
+float b37 = dx[sub_b_row_start_5 * c_cols + sub_b_col_4];
+float b38 = dx[sub_b_row_start_6 * c_cols + sub_b_col_4];
+float b39 = dx[sub_b_row_start_7 * c_cols + sub_b_col_4];
+float b40 = dx[sub_b_row_start_0 * c_cols + sub_b_col_5];
+float b41 = dx[sub_b_row_start_1 * c_cols + sub_b_col_5];
+float b42 = dx[sub_b_row_start_2 * c_cols + sub_b_col_5];
+float b43 = dx[sub_b_row_start_3 * c_cols + sub_b_col_5];
+float b44 = dx[sub_b_row_start_4 * c_cols + sub_b_col_5];
+float b45 = dx[sub_b_row_start_5 * c_cols + sub_b_col_5];
+float b46 = dx[sub_b_row_start_6 * c_cols + sub_b_col_5];
+float b47 = dx[sub_b_row_start_7 * c_cols + sub_b_col_5];
+float b48 = dx[sub_b_row_start_0 * c_cols + sub_b_col_6];
+float b49 = dx[sub_b_row_start_1 * c_cols + sub_b_col_6];
+float b50 = dx[sub_b_row_start_2 * c_cols + sub_b_col_6];
+float b51 = dx[sub_b_row_start_3 * c_cols + sub_b_col_6];
+float b52 = dx[sub_b_row_start_4 * c_cols + sub_b_col_6];
+float b53 = dx[sub_b_row_start_5 * c_cols + sub_b_col_6];
+float b54 = dx[sub_b_row_start_6 * c_cols + sub_b_col_6];
+float b55 = dx[sub_b_row_start_7 * c_cols + sub_b_col_6];
+float b56 = dx[sub_b_row_start_0 * c_cols + sub_b_col_7];
+float b57 = dx[sub_b_row_start_1 * c_cols + sub_b_col_7];
+float b58 = dx[sub_b_row_start_2 * c_cols + sub_b_col_7];
+float b59 = dx[sub_b_row_start_3 * c_cols + sub_b_col_7];
+float b60 = dx[sub_b_row_start_4 * c_cols + sub_b_col_7];
+float b61 = dx[sub_b_row_start_5 * c_cols + sub_b_col_7];
+float b62 = dx[sub_b_row_start_6 * c_cols + sub_b_col_7];
+float b63 = dx[sub_b_row_start_7 * c_cols + sub_b_col_7];
+sum_0 += nnz0_0 * b0 + nnz0_1 * b1 + nnz0_2 * b2 + nnz0_3 * b3 + nnz0_4 * b4 + nnz0_5 * b5 + nnz0_6 * b6 + nnz0_7 * b7 ;
+sum_1 += nnz1_0 * b0 + nnz1_1 * b1 + nnz1_2 * b2 + nnz1_3 * b3 + nnz1_4 * b4 + nnz1_5 * b5 + nnz1_6 * b6 + nnz1_7 * b7 ;
+sum_2 += nnz2_0 * b0 + nnz2_1 * b1 + nnz2_2 * b2 + nnz2_3 * b3 + nnz2_4 * b4 + nnz2_5 * b5 + nnz2_6 * b6 + nnz2_7 * b7 ;
+sum_3 += nnz0_0 * b8 + nnz0_1 * b9 + nnz0_2 * b10 + nnz0_3 * b11 + nnz0_4 * b12 + nnz0_5 * b13 + nnz0_6 * b14 + nnz0_7 * b15 ;
+sum_4 += nnz1_0 * b8 + nnz1_1 * b9 + nnz1_2 * b10 + nnz1_3 * b11 + nnz1_4 * b12 + nnz1_5 * b13 + nnz1_6 * b14 + nnz1_7 * b15 ;
+sum_5 += nnz2_0 * b8 + nnz2_1 * b9 + nnz2_2 * b10 + nnz2_3 * b11 + nnz2_4 * b12 + nnz2_5 * b13 + nnz2_6 * b14 + nnz2_7 * b15 ;
+sum_6 += nnz0_0 * b16 + nnz0_1 * b17 + nnz0_2 * b18 + nnz0_3 * b19 + nnz0_4 * b20 + nnz0_5 * b21 + nnz0_6 * b22 + nnz0_7 * b23 ;
+sum_7 += nnz1_0 * b16 + nnz1_1 * b17 + nnz1_2 * b18 + nnz1_3 * b19 + nnz1_4 * b20 + nnz1_5 * b21 + nnz1_6 * b22 + nnz1_7 * b23 ;
+sum_8 += nnz2_0 * b16 + nnz2_1 * b17 + nnz2_2 * b18 + nnz2_3 * b19 + nnz2_4 * b20 + nnz2_5 * b21 + nnz2_6 * b22 + nnz2_7 * b23 ;
+sum_9 += nnz0_0 * b24 + nnz0_1 * b25 + nnz0_2 * b26 + nnz0_3 * b27 + nnz0_4 * b28 + nnz0_5 * b29 + nnz0_6 * b30 + nnz0_7 * b31 ;
+sum_10 += nnz1_0 * b24 + nnz1_1 * b25 + nnz1_2 * b26 + nnz1_3 * b27 + nnz1_4 * b28 + nnz1_5 * b29 + nnz1_6 * b30 + nnz1_7 * b31 ;
+sum_11 += nnz2_0 * b24 + nnz2_1 * b25 + nnz2_2 * b26 + nnz2_3 * b27 + nnz2_4 * b28 + nnz2_5 * b29 + nnz2_6 * b30 + nnz2_7 * b31 ;
+sum_12 += nnz0_0 * b32 + nnz0_1 * b33 + nnz0_2 * b34 + nnz0_3 * b35 + nnz0_4 * b36 + nnz0_5 * b37 + nnz0_6 * b38 + nnz0_7 * b39 ;
+sum_13 += nnz1_0 * b32 + nnz1_1 * b33 + nnz1_2 * b34 + nnz1_3 * b35 + nnz1_4 * b36 + nnz1_5 * b37 + nnz1_6 * b38 + nnz1_7 * b39 ;
+sum_14 += nnz2_0 * b32 + nnz2_1 * b33 + nnz2_2 * b34 + nnz2_3 * b35 + nnz2_4 * b36 + nnz2_5 * b37 + nnz2_6 * b38 + nnz2_7 * b39 ;
+sum_15 += nnz0_0 * b40 + nnz0_1 * b41 + nnz0_2 * b42 + nnz0_3 * b43 + nnz0_4 * b44 + nnz0_5 * b45 + nnz0_6 * b46 + nnz0_7 * b47 ;
+sum_16 += nnz1_0 * b40 + nnz1_1 * b41 + nnz1_2 * b42 + nnz1_3 * b43 + nnz1_4 * b44 + nnz1_5 * b45 + nnz1_6 * b46 + nnz1_7 * b47 ;
+sum_17 += nnz2_0 * b40 + nnz2_1 * b41 + nnz2_2 * b42 + nnz2_3 * b43 + nnz2_4 * b44 + nnz2_5 * b45 + nnz2_6 * b46 + nnz2_7 * b47 ;
+sum_18 += nnz0_0 * b48 + nnz0_1 * b49 + nnz0_2 * b50 + nnz0_3 * b51 + nnz0_4 * b52 + nnz0_5 * b53 + nnz0_6 * b54 + nnz0_7 * b55 ;
+sum_19 += nnz1_0 * b48 + nnz1_1 * b49 + nnz1_2 * b50 + nnz1_3 * b51 + nnz1_4 * b52 + nnz1_5 * b53 + nnz1_6 * b54 + nnz1_7 * b55 ;
+sum_20 += nnz2_0 * b48 + nnz2_1 * b49 + nnz2_2 * b50 + nnz2_3 * b51 + nnz2_4 * b52 + nnz2_5 * b53 + nnz2_6 * b54 + nnz2_7 * b55 ;
+sum_21 += nnz0_0 * b56 + nnz0_1 * b57 + nnz0_2 * b58 + nnz0_3 * b59 + nnz0_4 * b60 + nnz0_5 * b61 + nnz0_6 * b62 + nnz0_7 * b63 ;
+sum_22 += nnz1_0 * b56 + nnz1_1 * b57 + nnz1_2 * b58 + nnz1_3 * b59 + nnz1_4 * b60 + nnz1_5 * b61 + nnz1_6 * b62 + nnz1_7 * b63 ;
+sum_23 += nnz2_0 * b56 + nnz2_1 * b57 + nnz2_2 * b58 + nnz2_3 * b59 + nnz2_4 * b60 + nnz2_5 * b61 + nnz2_6 * b62 + nnz2_7 * b63 ;
+t_nnz += 24;
+}
+int c_row = i * 4;
+int c_col = col + thread_id_in_warp;
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 0], sum_0);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 0], sum_1);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 0], sum_2);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 32], sum_3);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 32], sum_4);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 32], sum_5);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 64], sum_6);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 64], sum_7);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 64], sum_8);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 96], sum_9);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 96], sum_10);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 96], sum_11);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 128], sum_12);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 128], sum_13);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 128], sum_14);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 160], sum_15);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 160], sum_16);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 160], sum_17);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 192], sum_18);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 192], sum_19);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 192], sum_20);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 224], sum_21);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 224], sum_22);
+atomicAdd(&dy[(c_row + offset2) * c_cols + c_col + 224], sum_23);
+}
+}
 
 
-    __device__ void PatternWith3NNZByRowPanel2RowPerThread8BlockCacheLess(
-        int *RPP, int *NPP, float *NNZ, int *CB, float *dx, float *dy,int i, int c_cols, int offset0, int offset1) {
-    int blockSize = blockDim.x;
-    int thread_id_in_warp = threadIdx.x % 32;
-    int warp_id = threadIdx.x / 32;
-    int number_of_warps = blockSize / 32;
-    int rowStart_all = RPP[i];
-    int rowEnd_all = RPP[i + 1];
-    if (rowStart_all == rowEnd_all) {
-      return;
-    }
-    int number_of_row_panel_packs = (rowEnd_all - rowStart_all + 8 - 1) / 8;
-    int row_panel_pack_share = ((number_of_row_panel_packs + gridDim.y - 1) / gridDim.y) * 8;
-    int row_panel_start = rowStart_all + blockIdx.y * row_panel_pack_share;
-    int row_panel_end = row_panel_start + row_panel_pack_share;
-    row_panel_end = row_panel_end > rowEnd_all ? rowEnd_all : row_panel_end;
-    if (row_panel_start >= row_panel_end) {
-        return;
-    }
-    int c_col_partition = (c_cols + 31) / 32;
-    int c_col_share = ((c_col_partition + number_of_warps - 1) / number_of_warps) * 32;
-    c_col_share = c_col_share == 0 ? 32 : c_col_share;
-    int c_col_start = c_col_share * warp_id;
-    int c_col_end = c_col_start + c_col_share;
-    c_col_end = c_col_end > c_cols ? c_cols : c_col_end;
-    if (c_col_start >= c_col_end) {
-        return;
-    }
-    for (int col = c_col_start; col < c_col_end; col += 32) {
-    int t_nnz = NPP[i] + (row_panel_start - rowStart_all) * 2;
-    float sum_0 = 0.0f;
-    float sum_1 = 0.0f;
-    for (int j = row_panel_start; j < row_panel_end; j += 8) {
-    int sub_b_row_start_0 = CB[j + 0];
-    int sub_b_row_start_1 = CB[j + 1];
-    int sub_b_row_start_2 = CB[j + 2];
-    int sub_b_row_start_3 = CB[j + 3];
-    int sub_b_row_start_4 = CB[j + 4];
-    int sub_b_row_start_5 = CB[j + 5];
-    int sub_b_row_start_6 = CB[j + 6];
-    int sub_b_row_start_7 = CB[j + 7];
-    int sub_b_col_0 = col + 0 + thread_id_in_warp;
-    float nnz0_0 = NNZ[t_nnz + 0];
-    float nnz1_0 = NNZ[t_nnz + 1];
-    float nnz0_1 = NNZ[t_nnz + 2];
-    float nnz1_1 = NNZ[t_nnz + 3];
-    float nnz0_2 = NNZ[t_nnz + 4];
-    float nnz1_2 = NNZ[t_nnz + 5];
-    float nnz0_3 = NNZ[t_nnz + 6];
-    float nnz1_3 = NNZ[t_nnz + 7];
-    float nnz0_4 = NNZ[t_nnz + 8];
-    float nnz1_4 = NNZ[t_nnz + 9];
-    float nnz0_5 = NNZ[t_nnz + 10];
-    float nnz1_5 = NNZ[t_nnz + 11];
-    float nnz0_6 = NNZ[t_nnz + 12];
-    float nnz1_6 = NNZ[t_nnz + 13];
-    float nnz0_7 = NNZ[t_nnz + 14];
-    float nnz1_7 = NNZ[t_nnz + 15];
-    float b0 = dx[sub_b_row_start_0 * c_cols + sub_b_col_0];
-    float b1 = dx[sub_b_row_start_1 * c_cols + sub_b_col_0];
-    float b2 = dx[sub_b_row_start_2 * c_cols + sub_b_col_0];
-    float b3 = dx[sub_b_row_start_3 * c_cols + sub_b_col_0];
-    float b4 = dx[sub_b_row_start_4 * c_cols + sub_b_col_0];
-    float b5 = dx[sub_b_row_start_5 * c_cols + sub_b_col_0];
-    float b6 = dx[sub_b_row_start_6 * c_cols + sub_b_col_0];
-    float b7 = dx[sub_b_row_start_7 * c_cols + sub_b_col_0];
-    sum_0 += nnz0_0 * b0 + nnz0_1 * b1 + nnz0_2 * b2 + nnz0_3 * b3 + nnz0_4 * b4 + nnz0_5 * b5 + nnz0_6 * b6 + nnz0_7 * b7 ;
-    sum_1 += nnz1_0 * b0 + nnz1_1 * b1 + nnz1_2 * b2 + nnz1_3 * b3 + nnz1_4 * b4 + nnz1_5 * b5 + nnz1_6 * b6 + nnz1_7 * b7 ;
-    t_nnz += 16;
-    }
-    int c_row = i * 3;
-    int c_col = col + thread_id_in_warp;
-    atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 0], sum_0);
-    atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 0], sum_1);
-    }
-    }
+__device__ void PatternWith4NNZByRowPanel2RowPerThread8BlockCacheLess(
+    int *RPP, int *NPP, float *NNZ, int *CB, float *dx, float *dy,int i, int c_cols, int offset0, int offset1) {
+int blockSize = blockDim.x;
+int thread_id_in_warp = threadIdx.x % 32;
+int warp_id = threadIdx.x / 32;
+int number_of_warps = blockSize / 32;
+int rowStart_all = RPP[i];
+int rowEnd_all = RPP[i + 1];
+if (rowStart_all == rowEnd_all) {
+   return;
+}
+int number_of_row_panel_packs = (rowEnd_all - rowStart_all + 8 - 1) / 8;
+int row_panel_pack_share = ((number_of_row_panel_packs + gridDim.y - 1) / gridDim.y) * 8;
+int row_panel_start = rowStart_all + blockIdx.y * row_panel_pack_share;
+int row_panel_end = row_panel_start + row_panel_pack_share;
+row_panel_end = row_panel_end > rowEnd_all ? rowEnd_all : row_panel_end;
+if (row_panel_start >= row_panel_end) {
+    return;
+}
+int c_col_partition = (c_cols + 255) / 256;
+int c_col_share = ((c_col_partition + number_of_warps - 1) / number_of_warps) * 256;
+c_col_share = c_col_share == 0 ? 256 : c_col_share;
+int c_col_start = c_col_share * warp_id;
+int c_col_end = c_col_start + c_col_share;
+c_col_end = c_col_end > c_cols ? c_cols : c_col_end;
+if (c_col_start >= c_col_end) {
+    return;
+}
+for (int col = c_col_start; col < c_col_end; col += 256) {
+int t_nnz = NPP[i] + (row_panel_start - rowStart_all) * 2;
+float sum_0 = 0.0f;
+float sum_1 = 0.0f;
+float sum_2 = 0.0f;
+float sum_3 = 0.0f;
+float sum_4 = 0.0f;
+float sum_5 = 0.0f;
+float sum_6 = 0.0f;
+float sum_7 = 0.0f;
+float sum_8 = 0.0f;
+float sum_9 = 0.0f;
+float sum_10 = 0.0f;
+float sum_11 = 0.0f;
+float sum_12 = 0.0f;
+float sum_13 = 0.0f;
+float sum_14 = 0.0f;
+float sum_15 = 0.0f;
+for (int j = row_panel_start; j < row_panel_end; j += 8) {
+int sub_b_row_start_0 = CB[j + 0];
+int sub_b_row_start_1 = CB[j + 1];
+int sub_b_row_start_2 = CB[j + 2];
+int sub_b_row_start_3 = CB[j + 3];
+int sub_b_row_start_4 = CB[j + 4];
+int sub_b_row_start_5 = CB[j + 5];
+int sub_b_row_start_6 = CB[j + 6];
+int sub_b_row_start_7 = CB[j + 7];
+int sub_b_col_0 = col + 0 + thread_id_in_warp;
+int sub_b_col_1 = col + 32 + thread_id_in_warp;
+int sub_b_col_2 = col + 64 + thread_id_in_warp;
+int sub_b_col_3 = col + 96 + thread_id_in_warp;
+int sub_b_col_4 = col + 128 + thread_id_in_warp;
+int sub_b_col_5 = col + 160 + thread_id_in_warp;
+int sub_b_col_6 = col + 192 + thread_id_in_warp;
+int sub_b_col_7 = col + 224 + thread_id_in_warp;
+float nnz0_0 = NNZ[t_nnz + 0];
+float nnz1_0 = NNZ[t_nnz + 1];
+float nnz0_1 = NNZ[t_nnz + 2];
+float nnz1_1 = NNZ[t_nnz + 3];
+float nnz0_2 = NNZ[t_nnz + 4];
+float nnz1_2 = NNZ[t_nnz + 5];
+float nnz0_3 = NNZ[t_nnz + 6];
+float nnz1_3 = NNZ[t_nnz + 7];
+float nnz0_4 = NNZ[t_nnz + 8];
+float nnz1_4 = NNZ[t_nnz + 9];
+float nnz0_5 = NNZ[t_nnz + 10];
+float nnz1_5 = NNZ[t_nnz + 11];
+float nnz0_6 = NNZ[t_nnz + 12];
+float nnz1_6 = NNZ[t_nnz + 13];
+float nnz0_7 = NNZ[t_nnz + 14];
+float nnz1_7 = NNZ[t_nnz + 15];
+float b0 = dx[sub_b_row_start_0 * c_cols + sub_b_col_0];
+float b1 = dx[sub_b_row_start_1 * c_cols + sub_b_col_0];
+float b2 = dx[sub_b_row_start_2 * c_cols + sub_b_col_0];
+float b3 = dx[sub_b_row_start_3 * c_cols + sub_b_col_0];
+float b4 = dx[sub_b_row_start_4 * c_cols + sub_b_col_0];
+float b5 = dx[sub_b_row_start_5 * c_cols + sub_b_col_0];
+float b6 = dx[sub_b_row_start_6 * c_cols + sub_b_col_0];
+float b7 = dx[sub_b_row_start_7 * c_cols + sub_b_col_0];
+float b8 = dx[sub_b_row_start_0 * c_cols + sub_b_col_1];
+float b9 = dx[sub_b_row_start_1 * c_cols + sub_b_col_1];
+float b10 = dx[sub_b_row_start_2 * c_cols + sub_b_col_1];
+float b11 = dx[sub_b_row_start_3 * c_cols + sub_b_col_1];
+float b12 = dx[sub_b_row_start_4 * c_cols + sub_b_col_1];
+float b13 = dx[sub_b_row_start_5 * c_cols + sub_b_col_1];
+float b14 = dx[sub_b_row_start_6 * c_cols + sub_b_col_1];
+float b15 = dx[sub_b_row_start_7 * c_cols + sub_b_col_1];
+float b16 = dx[sub_b_row_start_0 * c_cols + sub_b_col_2];
+float b17 = dx[sub_b_row_start_1 * c_cols + sub_b_col_2];
+float b18 = dx[sub_b_row_start_2 * c_cols + sub_b_col_2];
+float b19 = dx[sub_b_row_start_3 * c_cols + sub_b_col_2];
+float b20 = dx[sub_b_row_start_4 * c_cols + sub_b_col_2];
+float b21 = dx[sub_b_row_start_5 * c_cols + sub_b_col_2];
+float b22 = dx[sub_b_row_start_6 * c_cols + sub_b_col_2];
+float b23 = dx[sub_b_row_start_7 * c_cols + sub_b_col_2];
+float b24 = dx[sub_b_row_start_0 * c_cols + sub_b_col_3];
+float b25 = dx[sub_b_row_start_1 * c_cols + sub_b_col_3];
+float b26 = dx[sub_b_row_start_2 * c_cols + sub_b_col_3];
+float b27 = dx[sub_b_row_start_3 * c_cols + sub_b_col_3];
+float b28 = dx[sub_b_row_start_4 * c_cols + sub_b_col_3];
+float b29 = dx[sub_b_row_start_5 * c_cols + sub_b_col_3];
+float b30 = dx[sub_b_row_start_6 * c_cols + sub_b_col_3];
+float b31 = dx[sub_b_row_start_7 * c_cols + sub_b_col_3];
+float b32 = dx[sub_b_row_start_0 * c_cols + sub_b_col_4];
+float b33 = dx[sub_b_row_start_1 * c_cols + sub_b_col_4];
+float b34 = dx[sub_b_row_start_2 * c_cols + sub_b_col_4];
+float b35 = dx[sub_b_row_start_3 * c_cols + sub_b_col_4];
+float b36 = dx[sub_b_row_start_4 * c_cols + sub_b_col_4];
+float b37 = dx[sub_b_row_start_5 * c_cols + sub_b_col_4];
+float b38 = dx[sub_b_row_start_6 * c_cols + sub_b_col_4];
+float b39 = dx[sub_b_row_start_7 * c_cols + sub_b_col_4];
+float b40 = dx[sub_b_row_start_0 * c_cols + sub_b_col_5];
+float b41 = dx[sub_b_row_start_1 * c_cols + sub_b_col_5];
+float b42 = dx[sub_b_row_start_2 * c_cols + sub_b_col_5];
+float b43 = dx[sub_b_row_start_3 * c_cols + sub_b_col_5];
+float b44 = dx[sub_b_row_start_4 * c_cols + sub_b_col_5];
+float b45 = dx[sub_b_row_start_5 * c_cols + sub_b_col_5];
+float b46 = dx[sub_b_row_start_6 * c_cols + sub_b_col_5];
+float b47 = dx[sub_b_row_start_7 * c_cols + sub_b_col_5];
+float b48 = dx[sub_b_row_start_0 * c_cols + sub_b_col_6];
+float b49 = dx[sub_b_row_start_1 * c_cols + sub_b_col_6];
+float b50 = dx[sub_b_row_start_2 * c_cols + sub_b_col_6];
+float b51 = dx[sub_b_row_start_3 * c_cols + sub_b_col_6];
+float b52 = dx[sub_b_row_start_4 * c_cols + sub_b_col_6];
+float b53 = dx[sub_b_row_start_5 * c_cols + sub_b_col_6];
+float b54 = dx[sub_b_row_start_6 * c_cols + sub_b_col_6];
+float b55 = dx[sub_b_row_start_7 * c_cols + sub_b_col_6];
+float b56 = dx[sub_b_row_start_0 * c_cols + sub_b_col_7];
+float b57 = dx[sub_b_row_start_1 * c_cols + sub_b_col_7];
+float b58 = dx[sub_b_row_start_2 * c_cols + sub_b_col_7];
+float b59 = dx[sub_b_row_start_3 * c_cols + sub_b_col_7];
+float b60 = dx[sub_b_row_start_4 * c_cols + sub_b_col_7];
+float b61 = dx[sub_b_row_start_5 * c_cols + sub_b_col_7];
+float b62 = dx[sub_b_row_start_6 * c_cols + sub_b_col_7];
+float b63 = dx[sub_b_row_start_7 * c_cols + sub_b_col_7];
+sum_0 += nnz0_0 * b0 + nnz0_1 * b1 + nnz0_2 * b2 + nnz0_3 * b3 + nnz0_4 * b4 + nnz0_5 * b5 + nnz0_6 * b6 + nnz0_7 * b7 ;
+sum_1 += nnz1_0 * b0 + nnz1_1 * b1 + nnz1_2 * b2 + nnz1_3 * b3 + nnz1_4 * b4 + nnz1_5 * b5 + nnz1_6 * b6 + nnz1_7 * b7 ;
+sum_2 += nnz0_0 * b8 + nnz0_1 * b9 + nnz0_2 * b10 + nnz0_3 * b11 + nnz0_4 * b12 + nnz0_5 * b13 + nnz0_6 * b14 + nnz0_7 * b15 ;
+sum_3 += nnz1_0 * b8 + nnz1_1 * b9 + nnz1_2 * b10 + nnz1_3 * b11 + nnz1_4 * b12 + nnz1_5 * b13 + nnz1_6 * b14 + nnz1_7 * b15 ;
+sum_4 += nnz0_0 * b16 + nnz0_1 * b17 + nnz0_2 * b18 + nnz0_3 * b19 + nnz0_4 * b20 + nnz0_5 * b21 + nnz0_6 * b22 + nnz0_7 * b23 ;
+sum_5 += nnz1_0 * b16 + nnz1_1 * b17 + nnz1_2 * b18 + nnz1_3 * b19 + nnz1_4 * b20 + nnz1_5 * b21 + nnz1_6 * b22 + nnz1_7 * b23 ;
+sum_6 += nnz0_0 * b24 + nnz0_1 * b25 + nnz0_2 * b26 + nnz0_3 * b27 + nnz0_4 * b28 + nnz0_5 * b29 + nnz0_6 * b30 + nnz0_7 * b31 ;
+sum_7 += nnz1_0 * b24 + nnz1_1 * b25 + nnz1_2 * b26 + nnz1_3 * b27 + nnz1_4 * b28 + nnz1_5 * b29 + nnz1_6 * b30 + nnz1_7 * b31 ;
+sum_8 += nnz0_0 * b32 + nnz0_1 * b33 + nnz0_2 * b34 + nnz0_3 * b35 + nnz0_4 * b36 + nnz0_5 * b37 + nnz0_6 * b38 + nnz0_7 * b39 ;
+sum_9 += nnz1_0 * b32 + nnz1_1 * b33 + nnz1_2 * b34 + nnz1_3 * b35 + nnz1_4 * b36 + nnz1_5 * b37 + nnz1_6 * b38 + nnz1_7 * b39 ;
+sum_10 += nnz0_0 * b40 + nnz0_1 * b41 + nnz0_2 * b42 + nnz0_3 * b43 + nnz0_4 * b44 + nnz0_5 * b45 + nnz0_6 * b46 + nnz0_7 * b47 ;
+sum_11 += nnz1_0 * b40 + nnz1_1 * b41 + nnz1_2 * b42 + nnz1_3 * b43 + nnz1_4 * b44 + nnz1_5 * b45 + nnz1_6 * b46 + nnz1_7 * b47 ;
+sum_12 += nnz0_0 * b48 + nnz0_1 * b49 + nnz0_2 * b50 + nnz0_3 * b51 + nnz0_4 * b52 + nnz0_5 * b53 + nnz0_6 * b54 + nnz0_7 * b55 ;
+sum_13 += nnz1_0 * b48 + nnz1_1 * b49 + nnz1_2 * b50 + nnz1_3 * b51 + nnz1_4 * b52 + nnz1_5 * b53 + nnz1_6 * b54 + nnz1_7 * b55 ;
+sum_14 += nnz0_0 * b56 + nnz0_1 * b57 + nnz0_2 * b58 + nnz0_3 * b59 + nnz0_4 * b60 + nnz0_5 * b61 + nnz0_6 * b62 + nnz0_7 * b63 ;
+sum_15 += nnz1_0 * b56 + nnz1_1 * b57 + nnz1_2 * b58 + nnz1_3 * b59 + nnz1_4 * b60 + nnz1_5 * b61 + nnz1_6 * b62 + nnz1_7 * b63 ;
+t_nnz += 16;
+}
+int c_row = i * 4;
+int c_col = col + thread_id_in_warp;
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 0], sum_0);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 0], sum_1);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 32], sum_2);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 32], sum_3);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 64], sum_4);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 64], sum_5);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 96], sum_6);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 96], sum_7);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 128], sum_8);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 128], sum_9);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 160], sum_10);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 160], sum_11);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 192], sum_12);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 192], sum_13);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 224], sum_14);
+atomicAdd(&dy[(c_row + offset1) * c_cols + c_col + 224], sum_15);
+}
+}
 
 
-    __device__ void PatternWith3NNZByRowPanel1RowPerThread8BlockCacheLess(
-        int *RPP, int *NPP, float *NNZ, int *CB, float *dx, float *dy,int i, int c_cols, int offset0) {
-    int blockSize = blockDim.x;
-    int thread_id_in_warp = threadIdx.x % 32;
-    int warp_id = threadIdx.x / 32;
-    int number_of_warps = blockSize / 32;
-    int rowStart_all = RPP[i];
-    int rowEnd_all = RPP[i + 1];
-    if (rowStart_all == rowEnd_all) {
-      return;
-    }
-    int number_of_row_panel_packs = (rowEnd_all - rowStart_all + 8 - 1) / 8;
-    int row_panel_pack_share = ((number_of_row_panel_packs + gridDim.y - 1) / gridDim.y) * 8;
-    int row_panel_start = rowStart_all + blockIdx.y * row_panel_pack_share;
-    int row_panel_end = row_panel_start + row_panel_pack_share;
-    row_panel_end = row_panel_end > rowEnd_all ? rowEnd_all : row_panel_end;
-    if (row_panel_start >= row_panel_end) {
-        return;
-    }
-    int c_col_partition = (c_cols + 31) / 32;
-    int c_col_share = ((c_col_partition + number_of_warps - 1) / number_of_warps) * 32;
-    c_col_share = c_col_share == 0 ? 32 : c_col_share;
-    int c_col_start = c_col_share * warp_id;
-    int c_col_end = c_col_start + c_col_share;
-    c_col_end = c_col_end > c_cols ? c_cols : c_col_end;
-    if (c_col_start >= c_col_end) {
-        return;
-    }
-    for (int col = c_col_start; col < c_col_end; col += 32) {
-    int t_nnz = NPP[i] + (row_panel_start - rowStart_all) * 1;
-    float sum_0 = 0.0f;
-    for (int j = row_panel_start; j < row_panel_end; j += 8) {
-    int sub_b_row_start_0 = CB[j + 0];
-    int sub_b_row_start_1 = CB[j + 1];
-    int sub_b_row_start_2 = CB[j + 2];
-    int sub_b_row_start_3 = CB[j + 3];
-    int sub_b_row_start_4 = CB[j + 4];
-    int sub_b_row_start_5 = CB[j + 5];
-    int sub_b_row_start_6 = CB[j + 6];
-    int sub_b_row_start_7 = CB[j + 7];
-    int sub_b_col_0 = col + 0 + thread_id_in_warp;
-    float nnz0_0 = NNZ[t_nnz + 0];
-    float nnz0_1 = NNZ[t_nnz + 1];
-    float nnz0_2 = NNZ[t_nnz + 2];
-    float nnz0_3 = NNZ[t_nnz + 3];
-    float nnz0_4 = NNZ[t_nnz + 4];
-    float nnz0_5 = NNZ[t_nnz + 5];
-    float nnz0_6 = NNZ[t_nnz + 6];
-    float nnz0_7 = NNZ[t_nnz + 7];
-    float b0 = dx[sub_b_row_start_0 * c_cols + sub_b_col_0];
-    float b1 = dx[sub_b_row_start_1 * c_cols + sub_b_col_0];
-    float b2 = dx[sub_b_row_start_2 * c_cols + sub_b_col_0];
-    float b3 = dx[sub_b_row_start_3 * c_cols + sub_b_col_0];
-    float b4 = dx[sub_b_row_start_4 * c_cols + sub_b_col_0];
-    float b5 = dx[sub_b_row_start_5 * c_cols + sub_b_col_0];
-    float b6 = dx[sub_b_row_start_6 * c_cols + sub_b_col_0];
-    float b7 = dx[sub_b_row_start_7 * c_cols + sub_b_col_0];
-    sum_0 += nnz0_0 * b0 + nnz0_1 * b1 + nnz0_2 * b2 + nnz0_3 * b3 + nnz0_4 * b4 + nnz0_5 * b5 + nnz0_6 * b6 + nnz0_7 * b7 ;
-    t_nnz += 8;
-    }
-    int c_row = i * 3;
-    int c_col = col + thread_id_in_warp;
-    atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 0], sum_0);
-  }
+__device__ void PatternWith4NNZByRowPanel1RowPerThread8BlockCacheLess(
+    int *RPP, int *NPP, float *NNZ, int *CB, float *dx, float *dy,int i, int c_cols, int offset0) {
+int blockSize = blockDim.x;
+int thread_id_in_warp = threadIdx.x % 32;
+int warp_id = threadIdx.x / 32;
+int number_of_warps = blockSize / 32;
+int rowStart_all = RPP[i];
+int rowEnd_all = RPP[i + 1];
+if (rowStart_all == rowEnd_all) {
+   return;
+}
+int number_of_row_panel_packs = (rowEnd_all - rowStart_all + 8 - 1) / 8;
+int row_panel_pack_share = ((number_of_row_panel_packs + gridDim.y - 1) / gridDim.y) * 8;
+int row_panel_start = rowStart_all + blockIdx.y * row_panel_pack_share;
+int row_panel_end = row_panel_start + row_panel_pack_share;
+row_panel_end = row_panel_end > rowEnd_all ? rowEnd_all : row_panel_end;
+if (row_panel_start >= row_panel_end) {
+    return;
+}
+int c_col_partition = (c_cols + 255) / 256;
+int c_col_share = ((c_col_partition + number_of_warps - 1) / number_of_warps) * 256;
+c_col_share = c_col_share == 0 ? 256 : c_col_share;
+int c_col_start = c_col_share * warp_id;
+int c_col_end = c_col_start + c_col_share;
+c_col_end = c_col_end > c_cols ? c_cols : c_col_end;
+if (c_col_start >= c_col_end) {
+    return;
+}
+for (int col = c_col_start; col < c_col_end; col += 256) {
+int t_nnz = NPP[i] + (row_panel_start - rowStart_all) * 1;
+float sum_0 = 0.0f;
+float sum_1 = 0.0f;
+float sum_2 = 0.0f;
+float sum_3 = 0.0f;
+float sum_4 = 0.0f;
+float sum_5 = 0.0f;
+float sum_6 = 0.0f;
+float sum_7 = 0.0f;
+for (int j = row_panel_start; j < row_panel_end; j += 8) {
+int sub_b_row_start_0 = CB[j + 0];
+int sub_b_row_start_1 = CB[j + 1];
+int sub_b_row_start_2 = CB[j + 2];
+int sub_b_row_start_3 = CB[j + 3];
+int sub_b_row_start_4 = CB[j + 4];
+int sub_b_row_start_5 = CB[j + 5];
+int sub_b_row_start_6 = CB[j + 6];
+int sub_b_row_start_7 = CB[j + 7];
+int sub_b_col_0 = col + 0 + thread_id_in_warp;
+int sub_b_col_1 = col + 32 + thread_id_in_warp;
+int sub_b_col_2 = col + 64 + thread_id_in_warp;
+int sub_b_col_3 = col + 96 + thread_id_in_warp;
+int sub_b_col_4 = col + 128 + thread_id_in_warp;
+int sub_b_col_5 = col + 160 + thread_id_in_warp;
+int sub_b_col_6 = col + 192 + thread_id_in_warp;
+int sub_b_col_7 = col + 224 + thread_id_in_warp;
+float nnz0_0 = NNZ[t_nnz + 0];
+float nnz0_1 = NNZ[t_nnz + 1];
+float nnz0_2 = NNZ[t_nnz + 2];
+float nnz0_3 = NNZ[t_nnz + 3];
+float nnz0_4 = NNZ[t_nnz + 4];
+float nnz0_5 = NNZ[t_nnz + 5];
+float nnz0_6 = NNZ[t_nnz + 6];
+float nnz0_7 = NNZ[t_nnz + 7];
+float b0 = dx[sub_b_row_start_0 * c_cols + sub_b_col_0];
+float b1 = dx[sub_b_row_start_1 * c_cols + sub_b_col_0];
+float b2 = dx[sub_b_row_start_2 * c_cols + sub_b_col_0];
+float b3 = dx[sub_b_row_start_3 * c_cols + sub_b_col_0];
+float b4 = dx[sub_b_row_start_4 * c_cols + sub_b_col_0];
+float b5 = dx[sub_b_row_start_5 * c_cols + sub_b_col_0];
+float b6 = dx[sub_b_row_start_6 * c_cols + sub_b_col_0];
+float b7 = dx[sub_b_row_start_7 * c_cols + sub_b_col_0];
+float b8 = dx[sub_b_row_start_0 * c_cols + sub_b_col_1];
+float b9 = dx[sub_b_row_start_1 * c_cols + sub_b_col_1];
+float b10 = dx[sub_b_row_start_2 * c_cols + sub_b_col_1];
+float b11 = dx[sub_b_row_start_3 * c_cols + sub_b_col_1];
+float b12 = dx[sub_b_row_start_4 * c_cols + sub_b_col_1];
+float b13 = dx[sub_b_row_start_5 * c_cols + sub_b_col_1];
+float b14 = dx[sub_b_row_start_6 * c_cols + sub_b_col_1];
+float b15 = dx[sub_b_row_start_7 * c_cols + sub_b_col_1];
+float b16 = dx[sub_b_row_start_0 * c_cols + sub_b_col_2];
+float b17 = dx[sub_b_row_start_1 * c_cols + sub_b_col_2];
+float b18 = dx[sub_b_row_start_2 * c_cols + sub_b_col_2];
+float b19 = dx[sub_b_row_start_3 * c_cols + sub_b_col_2];
+float b20 = dx[sub_b_row_start_4 * c_cols + sub_b_col_2];
+float b21 = dx[sub_b_row_start_5 * c_cols + sub_b_col_2];
+float b22 = dx[sub_b_row_start_6 * c_cols + sub_b_col_2];
+float b23 = dx[sub_b_row_start_7 * c_cols + sub_b_col_2];
+float b24 = dx[sub_b_row_start_0 * c_cols + sub_b_col_3];
+float b25 = dx[sub_b_row_start_1 * c_cols + sub_b_col_3];
+float b26 = dx[sub_b_row_start_2 * c_cols + sub_b_col_3];
+float b27 = dx[sub_b_row_start_3 * c_cols + sub_b_col_3];
+float b28 = dx[sub_b_row_start_4 * c_cols + sub_b_col_3];
+float b29 = dx[sub_b_row_start_5 * c_cols + sub_b_col_3];
+float b30 = dx[sub_b_row_start_6 * c_cols + sub_b_col_3];
+float b31 = dx[sub_b_row_start_7 * c_cols + sub_b_col_3];
+float b32 = dx[sub_b_row_start_0 * c_cols + sub_b_col_4];
+float b33 = dx[sub_b_row_start_1 * c_cols + sub_b_col_4];
+float b34 = dx[sub_b_row_start_2 * c_cols + sub_b_col_4];
+float b35 = dx[sub_b_row_start_3 * c_cols + sub_b_col_4];
+float b36 = dx[sub_b_row_start_4 * c_cols + sub_b_col_4];
+float b37 = dx[sub_b_row_start_5 * c_cols + sub_b_col_4];
+float b38 = dx[sub_b_row_start_6 * c_cols + sub_b_col_4];
+float b39 = dx[sub_b_row_start_7 * c_cols + sub_b_col_4];
+float b40 = dx[sub_b_row_start_0 * c_cols + sub_b_col_5];
+float b41 = dx[sub_b_row_start_1 * c_cols + sub_b_col_5];
+float b42 = dx[sub_b_row_start_2 * c_cols + sub_b_col_5];
+float b43 = dx[sub_b_row_start_3 * c_cols + sub_b_col_5];
+float b44 = dx[sub_b_row_start_4 * c_cols + sub_b_col_5];
+float b45 = dx[sub_b_row_start_5 * c_cols + sub_b_col_5];
+float b46 = dx[sub_b_row_start_6 * c_cols + sub_b_col_5];
+float b47 = dx[sub_b_row_start_7 * c_cols + sub_b_col_5];
+float b48 = dx[sub_b_row_start_0 * c_cols + sub_b_col_6];
+float b49 = dx[sub_b_row_start_1 * c_cols + sub_b_col_6];
+float b50 = dx[sub_b_row_start_2 * c_cols + sub_b_col_6];
+float b51 = dx[sub_b_row_start_3 * c_cols + sub_b_col_6];
+float b52 = dx[sub_b_row_start_4 * c_cols + sub_b_col_6];
+float b53 = dx[sub_b_row_start_5 * c_cols + sub_b_col_6];
+float b54 = dx[sub_b_row_start_6 * c_cols + sub_b_col_6];
+float b55 = dx[sub_b_row_start_7 * c_cols + sub_b_col_6];
+float b56 = dx[sub_b_row_start_0 * c_cols + sub_b_col_7];
+float b57 = dx[sub_b_row_start_1 * c_cols + sub_b_col_7];
+float b58 = dx[sub_b_row_start_2 * c_cols + sub_b_col_7];
+float b59 = dx[sub_b_row_start_3 * c_cols + sub_b_col_7];
+float b60 = dx[sub_b_row_start_4 * c_cols + sub_b_col_7];
+float b61 = dx[sub_b_row_start_5 * c_cols + sub_b_col_7];
+float b62 = dx[sub_b_row_start_6 * c_cols + sub_b_col_7];
+float b63 = dx[sub_b_row_start_7 * c_cols + sub_b_col_7];
+sum_0 += nnz0_0 * b0 + nnz0_1 * b1 + nnz0_2 * b2 + nnz0_3 * b3 + nnz0_4 * b4 + nnz0_5 * b5 + nnz0_6 * b6 + nnz0_7 * b7 ;
+sum_1 += nnz0_0 * b8 + nnz0_1 * b9 + nnz0_2 * b10 + nnz0_3 * b11 + nnz0_4 * b12 + nnz0_5 * b13 + nnz0_6 * b14 + nnz0_7 * b15 ;
+sum_2 += nnz0_0 * b16 + nnz0_1 * b17 + nnz0_2 * b18 + nnz0_3 * b19 + nnz0_4 * b20 + nnz0_5 * b21 + nnz0_6 * b22 + nnz0_7 * b23 ;
+sum_3 += nnz0_0 * b24 + nnz0_1 * b25 + nnz0_2 * b26 + nnz0_3 * b27 + nnz0_4 * b28 + nnz0_5 * b29 + nnz0_6 * b30 + nnz0_7 * b31 ;
+sum_4 += nnz0_0 * b32 + nnz0_1 * b33 + nnz0_2 * b34 + nnz0_3 * b35 + nnz0_4 * b36 + nnz0_5 * b37 + nnz0_6 * b38 + nnz0_7 * b39 ;
+sum_5 += nnz0_0 * b40 + nnz0_1 * b41 + nnz0_2 * b42 + nnz0_3 * b43 + nnz0_4 * b44 + nnz0_5 * b45 + nnz0_6 * b46 + nnz0_7 * b47 ;
+sum_6 += nnz0_0 * b48 + nnz0_1 * b49 + nnz0_2 * b50 + nnz0_3 * b51 + nnz0_4 * b52 + nnz0_5 * b53 + nnz0_6 * b54 + nnz0_7 * b55 ;
+sum_7 += nnz0_0 * b56 + nnz0_1 * b57 + nnz0_2 * b58 + nnz0_3 * b59 + nnz0_4 * b60 + nnz0_5 * b61 + nnz0_6 * b62 + nnz0_7 * b63 ;
+t_nnz += 8;
+}
+int c_row = i * 4;
+int c_col = col + thread_id_in_warp;
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 0], sum_0);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 32], sum_1);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 64], sum_2);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 96], sum_3);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 128], sum_4);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 160], sum_5);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 192], sum_6);
+atomicAdd(&dy[(c_row + offset0) * c_cols + c_col + 224], sum_7);
+}
 }
 
 
 __global__ void
-SpMMFullRowPanelGeneralKernel3With8BlockCacheLess(swiftware::compression::MixedFormatGPU<float> *mf, float *dX, float *dY, int c_cols) {
+SpMMFullRowPanelGeneralKernel4With8BlockCacheLess(swiftware::compression::MixedFormatGPU<float> *mf, float *dX, float *dY, int c_cols) {
   int i = blockIdx.x;
-  int pattern = i % 7;
+  int pattern = i % 15;
   switch (pattern) {
     case 0:
-      PatternWith3NNZByRowPanel3RowPerThread8BlockCacheLess(
+      PatternWith4NNZByRowPanel4RowPerThread8BlockCacheLess(
           mf->cf[0]->RPP, mf->cf[0]->NPP, mf->cf[0]->NNZ, mf->cf[0]->CB, dX, dY,
-          i / 7, c_cols , 0 , 1 , 2);
+          i / 15, c_cols , 0 , 1 , 2 , 3);
       break;
     case 1:
-      PatternWith3NNZByRowPanel2RowPerThread8BlockCacheLess(
+      PatternWith4NNZByRowPanel3RowPerThread8BlockCacheLess(
           mf->cf[1]->RPP, mf->cf[1]->NPP, mf->cf[1]->NNZ, mf->cf[1]->CB, dX, dY,
-          i / 7, c_cols , 0 , 1);
+          i / 15, c_cols , 0 , 1 , 2);
       break;
     case 2:
-      PatternWith3NNZByRowPanel2RowPerThread8BlockCacheLess(
+      PatternWith4NNZByRowPanel3RowPerThread8BlockCacheLess(
           mf->cf[2]->RPP, mf->cf[2]->NPP, mf->cf[2]->NNZ, mf->cf[2]->CB, dX, dY,
-          i / 7, c_cols , 0 , 2);
+          i / 15, c_cols , 0 , 1 , 3);
       break;
     case 3:
-      PatternWith3NNZByRowPanel1RowPerThread8BlockCacheLess(
+      PatternWith4NNZByRowPanel2RowPerThread8BlockCacheLess(
           mf->cf[3]->RPP, mf->cf[3]->NPP, mf->cf[3]->NNZ, mf->cf[3]->CB, dX, dY,
-          i / 7, c_cols , 0);
+          i / 15, c_cols , 0 , 1);
       break;
     case 4:
-      PatternWith3NNZByRowPanel2RowPerThread8BlockCacheLess(
+      PatternWith4NNZByRowPanel3RowPerThread8BlockCacheLess(
           mf->cf[4]->RPP, mf->cf[4]->NPP, mf->cf[4]->NNZ, mf->cf[4]->CB, dX, dY,
-          i / 7, c_cols , 1 , 2);
+          i / 15, c_cols , 0 , 2 , 3);
       break;
     case 5:
-      PatternWith3NNZByRowPanel1RowPerThread8BlockCacheLess(
+      PatternWith4NNZByRowPanel2RowPerThread8BlockCacheLess(
           mf->cf[5]->RPP, mf->cf[5]->NPP, mf->cf[5]->NNZ, mf->cf[5]->CB, dX, dY,
-          i / 7, c_cols , 1);
+          i / 15, c_cols , 0 , 2);
       break;
     case 6:
-      PatternWith3NNZByRowPanel1RowPerThread8BlockCacheLess(
+      PatternWith4NNZByRowPanel2RowPerThread8BlockCacheLess(
           mf->cf[6]->RPP, mf->cf[6]->NPP, mf->cf[6]->NNZ, mf->cf[6]->CB, dX, dY,
-          i / 7, c_cols , 2);
+          i / 15, c_cols , 0 , 3);
+      break;
+    case 7:
+      PatternWith4NNZByRowPanel1RowPerThread8BlockCacheLess(
+          mf->cf[7]->RPP, mf->cf[7]->NPP, mf->cf[7]->NNZ, mf->cf[7]->CB, dX, dY,
+          i / 15, c_cols , 0);
+      break;
+    case 8:
+      PatternWith4NNZByRowPanel3RowPerThread8BlockCacheLess(
+          mf->cf[8]->RPP, mf->cf[8]->NPP, mf->cf[8]->NNZ, mf->cf[8]->CB, dX, dY,
+          i / 15, c_cols , 1 , 2 , 3);
+      break;
+    case 9:
+      PatternWith4NNZByRowPanel2RowPerThread8BlockCacheLess(
+          mf->cf[9]->RPP, mf->cf[9]->NPP, mf->cf[9]->NNZ, mf->cf[9]->CB, dX, dY,
+          i / 15, c_cols , 1 , 2);
+      break;
+    case 10:
+      PatternWith4NNZByRowPanel2RowPerThread8BlockCacheLess(
+          mf->cf[10]->RPP, mf->cf[10]->NPP, mf->cf[10]->NNZ, mf->cf[10]->CB, dX, dY,
+          i / 15, c_cols , 1 , 3);
+      break;
+    case 11:
+      PatternWith4NNZByRowPanel1RowPerThread8BlockCacheLess(
+          mf->cf[11]->RPP, mf->cf[11]->NPP, mf->cf[11]->NNZ, mf->cf[11]->CB, dX, dY,
+          i / 15, c_cols , 1);
+      break;
+    case 12:
+      PatternWith4NNZByRowPanel2RowPerThread8BlockCacheLess(
+          mf->cf[12]->RPP, mf->cf[12]->NPP, mf->cf[12]->NNZ, mf->cf[12]->CB, dX, dY,
+          i / 15, c_cols , 2 , 3);
+      break;
+    case 13:
+      PatternWith4NNZByRowPanel1RowPerThread8BlockCacheLess(
+          mf->cf[13]->RPP, mf->cf[13]->NPP, mf->cf[13]->NNZ, mf->cf[13]->CB, dX, dY,
+          i / 15, c_cols , 2);
+      break;
+    case 14:
+      PatternWith4NNZByRowPanel1RowPerThread8BlockCacheLess(
+          mf->cf[14]->RPP, mf->cf[14]->NPP, mf->cf[14]->NNZ, mf->cf[14]->CB, dX, dY,
+          i / 15, c_cols , 3);
       break;
   }
 }
 
 
 __global__ void
-SingleSpMMFullRowPanelGeneralKernel3With8BlockCacheLess(swiftware::compression::MixedFormatGPU<float> *mf, float *dX, float *dY, int c_cols) {
+SingleSpMMFullRowPanelGeneralKernel4With8BlockCacheLess(swiftware::compression::MixedFormatGPU<float> *mf, float *dX, float *dY, int c_cols) {
   int i = blockIdx.x;
-  int pattern = i % 7;
-  PatternWith3NNZByRowPanel3RowPerThread8BlockCacheLess(
+  int pattern = i % 15;
+  PatternWith4NNZByRowPanel4RowPerThread8BlockCacheLess(
           mf->cf[0]->RPP, mf->cf[0]->NPP, mf->cf[0]->NNZ, mf->cf[0]->CB, dX, dY,
-          i / 7, c_cols , 0 , 1 , 2);
+          i / 15, c_cols , 0 , 1 , 2 , 3);
 }
 class SpMMMixePatternGeneralCacheLess: public SpMMSerialFloat {
     protected:
@@ -1664,8 +2275,8 @@ swiftware::benchmark::Timer t1;
 t1.startGPU();
 // lunch kernel
 
-dim3 gridDim((InT->MixedFormat->cf[0]->nrpp - 1) * 7 , 1);
-SpMMFullRowPanelGeneralKernel3With8BlockCacheLess<<<gridDim,
+dim3 gridDim((InT->MixedFormat->cf[0]->nrpp - 1) * 15 , 1);
+SpMMFullRowPanelGeneralKernel4With8BlockCacheLess<<<gridDim,
 64>>>(mf, dX, dY, InTensor->Z);
 
 t1.stopGPU("");
@@ -1704,80 +2315,4 @@ mf = allocateAndCopyMixedFormat(In1->MixedFormat);
 //    cudaFree(dY);
 }
 };
-
-
-
-class SingleSpMMMixePatternGeneralCacheLess: public SpMMSerialFloat {
-    protected:
-        float *dX, *dY;
-
-float *x;
-swiftware::compression::MixedFormatGPU<float> *mf;
-
-TensorInputsMixed *InT;
-
-bool verify(double &Error) override {
-    bool retValue = true;
-
-double infNorm = 0;
-for (int i = 0; i < InTensor->M * InTensor->Z - 4; ++i) {
-if (std::abs(OutTensor->Dx[i] - InTensor->CorrectMul[i]) > infNorm) {
-    infNorm = std::abs(OutTensor->Dx[i] - InTensor->CorrectMul[i]);
-}
-}
-Error = (double)infNorm;
-if (infNorm > InTensor->Threshold) {
-    retValue = false;
-}
-return retValue;
-}
-
-swiftware::benchmark::Timer execute() override {
-
-OutTensor->reset();
-swiftware::benchmark::Timer t1;
-
-t1.startGPU();
-// lunch kernel
-
-dim3 gridDim((InT->MixedFormat->cf[0]->nrpp - 1), 1);
-SingleSpMMFullRowPanelGeneralKernel3With8BlockCacheLess<<<gridDim,
-64>>>(mf, dX, dY, InTensor->Z);
-
-t1.stopGPU("");
-
-cudaMemcpy(this->OutTensor->Dx, dY,
-this->InTensor->ACsr->m * InTensor->Z * sizeof(float),
-cudaMemcpyDeviceToHost);
-cudaMemset(dY, 0, InTensor->M * InTensor->Z * sizeof(float));
-
-return t1;
-}
-
-public:
-SingleSpMMMixePatternGeneralCacheLess(TensorInputsMixed *In1,
-swiftware::benchmark::Stats *Stat1)
-: SpMMSerialFloat(In1, Stat1), InT(In1) {
-
-x = static_cast<float *>(aligned_alloc(32, sizeof(float) * In1->ACsr->nnz));
-for (int i = 0; i < In1->ACsr->nnz; i++) {
-    x[i] = static_cast<float>(In1->ACsr->x[i]);
-}
-
-cudaMalloc((void **)&dX, InTensor->N * InTensor->Z * sizeof(float));
-cudaMalloc((void **)&dY, InTensor->M * InTensor->Z * sizeof(float));
-//
-cudaMemset(dY, 0, InTensor->M * InTensor->Z * sizeof(float));
-cudaMemcpy(dX, this->InTensor->Bx,
-InTensor->N * InTensor->Z * sizeof(float),
-cudaMemcpyHostToDevice);
-
-mf = allocateAndCopyMixedFormat(In1->MixedFormat);
-};
-
-~SingleSpMMMixePatternGeneralCacheLess() {
-//    cudaFree(dX);
-//    cudaFree(dY);
-}
-};
-#endif // COMPRESSED_TENSOR_ALGEBRA_SPMM_SMALL_B_COL_DEMO_GPU_UTILS_H
+#endif // COMPRESSED_TENSOR_ALGEBRA_SPMM_DEMO_GPU_UTILS_H

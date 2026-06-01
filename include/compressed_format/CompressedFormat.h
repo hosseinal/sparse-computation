@@ -5,6 +5,7 @@
 #include "aggregation/exceptions.h"
 #include "aggregation/sparse_io.h"
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
