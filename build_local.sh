@@ -1,66 +1,21 @@
 #!/bin/bash
+# Build CUDA demos. Usage: ./build_local.sh [m] [b_col]   (defaults: 4, 32)
 set -e
+cd "$(dirname "$0")"
 
-# Usage: ./build_local.sh [kernel_m] [b_col]
-# Example: ./build_local.sh 4 32
-m=${1:-4}
-b_col=${2:-32}
+M=${1:-4}
+B_COL=${2:-32}
 
-n=8
-bcol_unroll_factor=8
-warp_num=2
-spmv_warps=1
-small_b_col_warps=1
-
-BENCHMARK_URL="https://github.com/SwiftWare-Lab/benchmark.git"
-AGGREGATION_URL="https://github.com/sympiler/aggregation.git"
-
-fetch_deps() {
-  if [ ! -f benchmark/CMakeLists.txt ]; then
-    echo "Fetching benchmark/ ..."
-    rm -rf benchmark
-    git clone --depth 1 "${BENCHMARK_URL}" benchmark
-  fi
-  if [ ! -f aggregation/CMakeLists.txt ]; then
-    echo "Fetching aggregation/ ..."
-    rm -rf aggregation
-    git clone --depth 1 "${AGGREGATION_URL}" aggregation
-  fi
-}
-
-if [ -d .git ]; then
-  git submodule update --init --recursive 2>/dev/null || fetch_deps
-else
-  fetch_deps
+if [ ! -d venv ]; then
+  python3 -m venv venv
+  ./venv/bin/pip install -q -r requirements.txt
 fi
+PY=./venv/bin/python3
 
-if [ ! -f benchmark/CMakeLists.txt ] || [ ! -f aggregation/CMakeLists.txt ]; then
-  echo "Error: need benchmark/ and aggregation/ (CMakeLists.txt in each)."
-  echo "Install git and re-run this script, or copy those folders in by hand."
-  exit 1
-fi
+$PY codeGen/main_spmm_small_b_col.py example_cuda/spmm_small_b_col_demo_gpu_utils.h "$M" 1 "$B_COL" --pattern_dictionary false
+$PY codeGen/main_spmm.py example_cuda/spmm_demo_gpu_utils.h format "$M" 8 8 2 i-j --pattern_dictionary false
 
-python3 -m venv venv
-source venv/bin/activate
-pip3 install -r requirements.txt
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j"$(nproc)"
 
-mkdir -p build
-cd build
-
-python3 ../codeGen/main_spmm_small_b_col.py \
-  ../example_cuda/spmm_small_b_col_demo_gpu_utils.h \
-  "${m}" "${small_b_col_warps}" "${b_col}" \
-  --pattern_dictionary false
-
-python3 ../codeGen/main_spmm.py \
-  ../example_cuda/spmm_demo_gpu_utils.h format \
-  "${m}" "${n}" "${bcol_unroll_factor}" "${warp_num}" i-j \
-  --pattern_dictionary false
-
-python3 ../codeGen/main_spmv.py \
-  ../example_cuda/spmv_demo_gpu_utils.h \
-  "${m}" "${spmv_warps}" \
-  --pattern_dictionary false
-
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j "$(nproc)"
+echo "Done. Binaries in build/example_cuda/"
