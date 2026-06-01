@@ -1,6 +1,6 @@
 # Compressed Tensor Algebra
 
-**Build:** `./build_local.sh` or `./build_local.sh 4 32`
+**Build:** `python3 -m venv venv` (once), then `./build_local.sh` or `./build_local.sh 4 32`
 
 **Run (large b_col):** `./run_local_spmm_large_b_col.sh /path/to/matrices 32`
 
