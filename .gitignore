@@ -33,7 +33,6 @@
 
 # Folders
 *.csv
-*.txt
 !requirements.txt
 *.np
 
