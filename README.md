@@ -6,6 +6,4 @@
 
 **Run (small b_col):** `./run_local_spmm_small_b_col.sh /path/to/matrices 4`
 
-Needs: CUDA, CMake, Python 3.
-
-`benchmark/` and `aggregation/` are normal folders in this repo (not submodules). Copy the whole project to build elsewhere.
+Needs: CUDA, CMake, Python 3, and `benchmark/` + `aggregation/` in the project root.
