@@ -10,6 +10,12 @@ b_col=$2
 
 kernel_m=4
 kernel_n=1
+b_unroll_factor=1
+if [ "$b_col" -gt 32 ]; then
+  warp_num=2
+else
+  warp_num=1
+fi
 
 matrix_dir=$(dirname "$matrix_path")
 matrix_name=$(basename "$matrix_path" .mtx)
@@ -17,7 +23,7 @@ compressed_matrix_path="${matrix_dir}/${matrix_name}-${kernel_m}-${kernel_n}.cfm
 
 python3 codeGen/ss_format/format_generator.py "$matrix_path" "$kernel_m" "$kernel_n" --pattern_dictionary false
 
-python3 codeGen/main_spmm.py example_cuda/spmm_demo_gpu_utils.h format "$kernel_m" 8 8 2 i-j --pattern_dictionary false
+python3 codeGen/main_spmm.py example_cuda/spmm_demo_gpu_utils.h format "$kernel_m" "$kernel_n" "$b_unroll_factor" "$warp_num" i-j --pattern_dictionary false
 
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j"$(nproc)" --target spmm_demo_gpu
@@ -27,5 +33,5 @@ build/example_cuda/spmm_demo_gpu \
   --header --baseline=true \
   -n SPMM -s CSR -t "$b_col" \
   --b_matrix_columns="$b_col" \
-  --number_of_warps=2 \
-  --b_unroll_factor=8
+  --number_of_warps="$warp_num" \
+  --b_unroll_factor="$b_unroll_factor"
