@@ -87,7 +87,8 @@ if __name__ == "__main__":
     if pattern_dict != "false":
         pattern_type_dictionary = pdict.read_pattern_dictionary(pattern_dict)
     else:
-        pattern_type_dictionary = pdict.generate_pattern_dictionary(m, n)
+        # Patterns are per row-panel (m bits), not m*n. kernel_n is CUDA tile width.
+        pattern_type_dictionary = pdict.generate_pattern_dictionary(m, 1)
 
     if matrix_type == "dense":
         main_dense(m, n, bcol_unroll_factor, warp_num, path, loop_order, pattern_type_dictionary)

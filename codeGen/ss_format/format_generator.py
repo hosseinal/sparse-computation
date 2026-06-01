@@ -204,7 +204,8 @@ if __name__ == "__main__":
             arr = tuple(c == "1" for c in val)
             patterns[arr] = int(key)
     else:
-        patterns = build_patterns_map(kernel_m, kernel_n)
+        # kernel_n is column pack size in .cfmtx; pattern masks use kernel_m rows only.
+        patterns = build_patterns_map(kernel_m, 1)
 
     print("pattern dictionary : ", patterns)
 
