@@ -31,6 +31,11 @@
 *.out
 *.app
 
+# Python bytecode and caches (all directories)
+__pycache__/
+*.py[cod]
+*$py.class
+
 #clion files
 .idea/
 cmake-build-release

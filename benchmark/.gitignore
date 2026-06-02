@@ -31,5 +31,10 @@
 *.out
 *.app
 
+# Python bytecode and caches (all directories)
+__pycache__/
+*.py[cod]
+*$py.class
+
 .idea/
 cmake-build-debug/

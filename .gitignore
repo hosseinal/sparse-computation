@@ -1,74 +1,37 @@
-# Prerequisites
+# C/C++ build artifacts
 *.d
-
-# Compiled Object files
 *.slo
 *.lo
 *.o
 *.obj
-
-# Precompiled Headers
 *.gch
 *.pch
-
-# Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
 *.mod
 *.smod
-
-# Compiled Static libraries
 *.lai
 *.la
 *.a
 *.lib
-
-# Executables
 *.exe
 *.out
 *.app
 
-# Folders
-*.csv
-!requirements.txt
-*.np
+# Python bytecode and caches (all directories)
+__pycache__/
+*.py[cod]
+*$py.class
 
-tokenizer/
-sparse_opt/
-my_wikitext2.feather/
-wikitext2_dataset/
+# IDE
 .idea/
+.vscode/
+
+# CMake / local build
 build/
 cmake-build-debug/
-atData/
-papi/
-data/
-results.csv
-tensor_data/
-scripts/output/
-testlocally.sh
-output/
-codeGen/output/
-codeGen/__pycache__/
-py_example/__pycache__/
-example_cuda/test_spiling.cu
-venv/
-codeGen/pattern_frequency_plot.py
-pattern_frequency_plot.png
-*.png
-spmv.csv
-.vscode
-scripts/data/
-scripts/output/
-scripts/saved_models/
-scripts/saved_models_all_data/
-scripts/results/
-scripts/export/
-bell/build/
-compiler_time/build/
 
-resnet_test/build/
-resnet_test/matrices/
+# Virtual environment and codegen output
+venv/
+codeGen/output/
