@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 kernel_m=${1:-4}
 b_col=${2:-32}
-kernel_n=1
+kernel_n=2
 b_unroll_factor=1
 if [ "$b_col" -gt 32 ]; then
   warp_num=2
