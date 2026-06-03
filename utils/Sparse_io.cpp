@@ -24,7 +24,7 @@ bool endsWith(const std::string &str, const std::string &suffix) {
 }
 
 // e.g. "matrix-4-8.cfmtx" or "matrix-64-128.cfmtx" -> "matrix.mtx"
-// Codegen names files: <stem>-<kernel_m>-<kernel_n>.cfmtx
+// code_gen names files: <stem>-<kernel_m>-<kernel_n>.cfmtx
 std::string companionMtxPathFromCFMTX(const std::string &cfmtxPath) {
   constexpr size_t kCfmtxSuffixLen = 6; // ".cfmtx"
   if (cfmtxPath.size() <= kCfmtxSuffixLen) {

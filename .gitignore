@@ -32,6 +32,6 @@ __pycache__/
 build/
 cmake-build-debug/
 
-# Virtual environment and codegen output
+# Virtual environment and code_gen output
 venv/
-codeGen/output/
+code_gen/output/

@@ -13,7 +13,7 @@
 namespace swiftware {
 namespace compression {
 
-// matrixPath must be a .cfmtx file (e.g. matrix-4-8.cfmtx from codegen).
+// matrixPath must be a .cfmtx file (e.g. matrix-4-8.cfmtx from code_gen).
 struct CfmtxMatrixLoad {
   sym_lib::CSR *csr = nullptr;
   MixedFormat<float> *compressed = nullptr;

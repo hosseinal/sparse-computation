@@ -1,6 +1,6 @@
 # Enumerate and Sparse Coarsen
 
-**Run** (builds codegen + binary, then benchmarks one matrix):
+**Run** (builds code_gen + binary, then benchmarks one matrix):
 
 The code run base on size of B in **AxB=C**
 
@@ -15,7 +15,6 @@ Note that other sizes are not supported
 **Build**
 
 Optional: `./build_local.sh` to build all demos at once.
-
 
 
 **To run**

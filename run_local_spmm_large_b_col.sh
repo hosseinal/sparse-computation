@@ -21,9 +21,9 @@ matrix_dir=$(dirname "$matrix_path")
 matrix_name=$(basename "$matrix_path" .mtx)
 compressed_matrix_path="${matrix_dir}/${matrix_name}-${kernel_m}-${kernel_n}.cfmtx"
 
-python3 codeGen/ss_format/format_generator.py "$matrix_path" "$kernel_m" "$kernel_n" --pattern_dictionary false
+python3 code_gen/ss_format/format_generator.py "$matrix_path" "$kernel_m" "$kernel_n" --pattern_dictionary false
 
-python3 codeGen/main_spmm.py example_cuda/spmm_demo_gpu_utils.h format "$kernel_m" "$kernel_n" "$b_unroll_factor" "$warp_num" i-j --pattern_dictionary false
+python3 code_gen/main_spmm.py example_cuda/spmm_demo_gpu_utils.h format "$kernel_m" "$kernel_n" "$b_unroll_factor" "$warp_num" i-j --pattern_dictionary false
 
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j"$(nproc)" --target spmm_demo_gpu
